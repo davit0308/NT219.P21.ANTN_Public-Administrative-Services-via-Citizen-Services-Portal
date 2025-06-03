@@ -13,8 +13,8 @@ export default function Navbar() {
           </div>
         </div>
         <div className="flex gap-2">
-          <button className="border border-[#ce7a58] text-black px-3 py-1 rounded hover:bg-[#ce7a58] hover:text-white cursor-pointer transition-colors">Sign up</button>
-          <button className="border border-[#ce7a58] text-black px-3 py-1 rounded hover:bg-[#ce7a58] hover:text-white cursor-pointer transition-colors">Sign in</button>
+          <Link to="/register" className="border-2 border-[#ce7a58] text-black px-5 py-2 rounded hover:bg-[#ce7a58] hover:text-white cursor-pointer mr-5 font-medium">Sign up</Link>
+          <Link to="/login" className="border-2 border-[#ce7a58] text-black px-5 py-2 rounded hover:bg-[#ce7a58] hover:text-white cursor-pointer mr-5 font-medium">Sign in</Link>
         </div>
       </div>
       <div className="bg-gray-100 border-t border-gray-300">
@@ -24,7 +24,7 @@ export default function Navbar() {
               <FaHome className="text-red-700" /> Home
             </Link>
             <Link to="/passport" className="hover:text-red-700">Passport issuance</Link>
-            <Link to="/feedback" className="hover:text-red-700">Citizen identification card issuance</Link>
+            <Link to="/identitycard" className="hover:text-red-700">Citizen identification card issuance</Link>
             <Link to="/support" className="hover:text-red-700">Support</Link>
           </div>
         </div>

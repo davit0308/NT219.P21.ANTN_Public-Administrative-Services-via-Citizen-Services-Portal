@@ -70,11 +70,11 @@ import { useSelector } from "react-redux";
 function AppContent() {
   const location = useLocation();
   const isLoggedIn = useSelector((state) => state.auth.login.currentUser);
-
+  const user = useSelector((state) => state.auth.login?.currentUser);
   // Xác định navbar theo route
   const isOfficerRoute = location.pathname.startsWith('/officer');
   // isOfficer true nếu user có trường admin === true
-  const isOfficer = isLoggedIn?.admin === true;
+  const isOfficer =  user?.userData.admin;
 
   // Lấy role từ user trong Redux store nếu đã login
   const role = isLoggedIn?.role || null;
@@ -90,16 +90,15 @@ function AppContent() {
         <Route path="/login" element={isLoggedIn ? <Navigate to="/" /> : <Login />} />
         <Route path="/register" element={isLoggedIn ? <Navigate to="/" /> : <Register />} />
 
-        {/* Nếu là officer, chuyển hướng sang /officer */}
-        {isOfficer && location.pathname !== "/officer" && <Navigate to="/officer" replace />}
+        
 
         /* Trang officer — cần đăng nhập và role === 'officer' */
         <Route
           path="/officer"
           element={
             isLoggedIn ? (
-              role === "officer" ? (
-                <OfficerDashboard />
+              isOfficer ? (
+                <Navigate to="/officer" />
               ) : (
                 <div className="text-center py-20 text-red-600 font-bold text-xl">
                   Bạn không có quyền truy cập trang này.

@@ -1,8 +1,7 @@
 import { loginRequest, loginSuccess, loginFailure, registerFailure, registerRequest, registerSuccess, logoutRequest, logoutSuccess, logoutFailure } from "./authSlide";
 import axios from "axios"; //npm install axios
 import { resetApp } from "./resetAction";
-import { customToast } from "../utils/customToast";
-import { toast } from "react-toastify";
+
 
 export const loginUser = async (user, dispatch, navigate) => {
     dispatch(loginRequest());
@@ -83,7 +82,7 @@ export const registerUser = async (user, dispatch, navigate) => {
 export const logoutUser = async (dispatch, navigate) => {
     dispatch(logoutRequest());
     try {
-        await axios.post("/api/auth/logout", {}, {
+        await axios.post("http://localhost:9090/api/logout", {}, {
             withCredentials: true,
         });
         dispatch(logoutSuccess());

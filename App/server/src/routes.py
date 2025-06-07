@@ -5,35 +5,41 @@ import datetime
 from .utils.jwt import token_required
 from flask import Blueprint
 
+from mongoengine import connect
 
 from flask_cors import cross_origin
 import os
 from dotenv import load_dotenv
+from .models.User import User
 
 load_dotenv()
-ACCESS_KEY = os.getenv("ACCESS_KEY")  # Đảm bảo đã đặt ACCESS_KEY trong file .env
+ACCESS_KEY = os.getenv("ACCESS_KEY")
 
 main = Blueprint("main", __name__)
 bcrypt = Bcrypt()
+# # Giả lập user trong DB (username + hashed password + id)
+# users = {
+#     "User": {
+#         "id": 2,
+#         "password": bcrypt.generate_password_hash("123456").decode("utf-8"),
+#         "name": "User",
+#         "admin": False
+#     }
+# }
 
-# Giả lập user trong DB (username + hashed password + id)
-users = {
-    "User": {
-        "id": 2,
-        "password": bcrypt.generate_password_hash("123456").decode("utf-8"),
-        "name": "User",
-        "admin": False
-    }
-}
+# admin = {
+#     "User": {
+#         "id": 1,
+#         "password": bcrypt.generate_password_hash("123456").decode("utf-8"),
+#         "name": "Admin",
+#         "admin": True
+#     }
+# }
+connect(
+    db=os.getenv("MONGO_DB_NAME"),
+    host=os.getenv("MONGO_URI")
+)
 
-admin = {
-    "User": {
-        "id": 1,
-        "password": bcrypt.generate_password_hash("123456").decode("utf-8"),
-        "name": "Admin",
-        "admin": True
-    }
-}
 
 @main.route("/api/user-data")
 @token_required
@@ -45,20 +51,24 @@ def login():
     data = request.get_json()
     username = data.get("username")
     password = data.get("password")
-    admin = data.get("admin")
-
+    # admin = data.get("admin")
+    print("username", username)
+    print("password", password)
+    print (User.get(username)["username"])  
+    print ("role admin: ", User.get(username)["admin"])  
+    
     if not username or not password:
         return jsonify({"success": False, "message": "Thiếu username hoặc mật khẩu"}), 400
 
-    user = users.get(username)
+    user = User.get(username)
     if not user or not bcrypt.check_password_hash(user["password"], password):
         return jsonify({"success": False, "message": "Tên đăng nhập hoặc mật khẩu không đúng"}), 401
 
     # Tạo JWT token
     payload = {
-        "id": user["id"],
-        "username": username,
-        "admin": user.get("admin", False),
+        "id": str(user["id"]),
+        "username": user["username"],
+        "admin": user["admin"],
         "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
     }
     token = jwt.encode(payload, ACCESS_KEY, algorithm="HS256")
@@ -70,7 +80,8 @@ def login():
         "userData": {
             "username": username,
             "name": user["name"],
-            "admin": admin
+            "admin": user["admin"],
+            
         }
     }), 200
 

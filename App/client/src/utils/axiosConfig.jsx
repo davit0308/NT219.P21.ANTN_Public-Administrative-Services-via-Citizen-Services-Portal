@@ -1,7 +1,6 @@
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { logoutUser } from "../redux/apiRequest";
-import { toast } from "react-toastify";
 
 const refreshToken = async () => {
     try {
@@ -34,12 +33,7 @@ export const createAxios = (user, dispatch, stateSuccess, navigate) => {
                     config.headers["Authorization"] = "Bearer " + data.access_token;
 
                 } catch (err) {
-                    toast.error("Session expired. Please log in again.", {
-                        position: "top-right",
-                        autoClose: 4000,
-                        pauseOnHover: true,
-                        theme: "light"
-                    });
+                    alert("Session expired. Please log in again.");
                     logoutUser(dispatch, navigate);
                 }
             } else {

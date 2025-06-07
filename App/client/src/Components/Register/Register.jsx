@@ -60,9 +60,11 @@ export default function Register() {
         <p className="mt-6 text-center text-sm text-gray-600">
           {/* Đã có tài khoản?{" "} */}
           Để sử dụng cổng dịch vụ công
-          <p href="/login" className="text-red-600 hover:text-red-500 font-medium">
-            Vui lòng sử dụng tài khoản chứng thực mức 2!
           </p>
+          <p className="text-center">
+          <a href="/login" className="text-red-700 hover:text-red-300 font-medium">
+            Vui lòng sử dụng tài khoản chứng thực mức 2!
+          </a>
         </p>
       </div>
     </div>

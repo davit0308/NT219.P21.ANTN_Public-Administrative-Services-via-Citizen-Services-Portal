@@ -3,8 +3,11 @@ from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from routes import main  # Import route từ file trên
 
+
+
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins="http://localhost:3000", supports_credentials=True)
+
 bcrypt = Bcrypt(app)
 
 app.register_blueprint(main)

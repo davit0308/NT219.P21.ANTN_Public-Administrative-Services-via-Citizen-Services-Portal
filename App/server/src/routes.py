@@ -1,10 +1,17 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify,  make_response
 from flask_bcrypt import Bcrypt
 import jwt
 import datetime
 from .utils.jwt import token_required
+from flask import Blueprint
 
-ACCESS_KEY = "your_secret_key_here"  # Thay bằng key bí mật thực tế của bạn
+
+from flask_cors import cross_origin
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+ACCESS_KEY = os.getenv("ACCESS_KEY")  # Đảm bảo đã đặt ACCESS_KEY trong file .env
 
 main = Blueprint("main", __name__)
 bcrypt = Bcrypt()
@@ -12,10 +19,19 @@ bcrypt = Bcrypt()
 # Giả lập user trong DB (username + hashed password + id)
 users = {
     "User": {
-        "id": 1,
+        "id": 2,
         "password": bcrypt.generate_password_hash("123456").decode("utf-8"),
         "name": "User",
         "admin": False
+    }
+}
+
+admin = {
+    "User": {
+        "id": 1,
+        "password": bcrypt.generate_password_hash("123456").decode("utf-8"),
+        "name": "Admin",
+        "admin": True
     }
 }
 
@@ -29,6 +45,7 @@ def login():
     data = request.get_json()
     username = data.get("username")
     password = data.get("password")
+    admin = data.get("admin")
 
     if not username or not password:
         return jsonify({"success": False, "message": "Thiếu username hoặc mật khẩu"}), 400
@@ -52,9 +69,19 @@ def login():
         "token": token,
         "userData": {
             "username": username,
-            "name": user["name"]
+            "name": user["name"],
+            "admin": admin
         }
     }), 200
+
+@main.route("/api/logout", methods=["POST"])
+@cross_origin(origin="http://localhost:3000", supports_credentials=True)
+def logout():
+    response = make_response(jsonify({"message": "Đăng xuất thành công"}), 200)
+    response.set_cookie("refresh_token", "", max_age=0, httponly=True, samesite="Strict")
+    return response
+
+
 
 @main.route("/api/hello")
 def hello():

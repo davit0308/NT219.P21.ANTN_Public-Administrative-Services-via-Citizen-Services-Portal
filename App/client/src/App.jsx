@@ -98,7 +98,10 @@ function AppContent() {
           element={
             isLoggedIn ? (
               isOfficer ? (
-                <Navigate to="/officer" />
+                <>
+                  <Navigate to="/officer" />
+                  <OfficerDashboard />
+                </>
               ) : (
                 <div className="text-center py-20 text-red-600 font-bold text-xl">
                   Bạn không có quyền truy cập trang này.
@@ -112,9 +115,19 @@ function AppContent() {
 
         {/* Các trang citizen — cần đăng nhập */}
         <Route
+          path="/"
+          element={
+            isLoggedIn && !isOfficer  ? (
+              <Passport />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
           path="/identitycard"
           element={
-            isLoggedIn ? (
+            isLoggedIn && !isOfficer  ? (
               <IdentityCard />
             ) : (
               <Navigate to="/login" />
@@ -124,7 +137,7 @@ function AppContent() {
         <Route
           path="/passport"
           element={
-            isLoggedIn ? (
+            isLoggedIn && !isOfficer  ? (
               <Passport />
             ) : (
               <Navigate to="/login" />

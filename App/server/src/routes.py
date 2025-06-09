@@ -3,7 +3,12 @@ from flask_bcrypt import Bcrypt
 import jwt
 import datetime
 from .utils.jwt import token_required
-from flask import Blueprint
+from flask import Blueprint, jsonify, session
+from cryptography.hazmat.primitives.asymmetric import dh
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+import base64
 
 from mongoengine import connect
 
@@ -93,7 +98,30 @@ def logout():
     return response
 
 
+# Sinh keypair ECDH (prime256v1 có tên gọi khác là P-256 hay secp256r1)
+server_private_key = ec.generate_private_key(ec.SECP256R1())
+server_public_key = server_private_key.public_key()
 
-@main.route("/api/hello")
-def hello():
-    return jsonify({"message": "Hello from Flask API!"})
+@main.route("/api/ecdh-params", methods=["GET"])
+def get_ecdh_params():
+    pub_bytes = server_public_key.public_bytes(
+        serialization.Encoding.PEM,
+        serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    return jsonify({
+        "server_public_key": pub_bytes.decode()
+    })
+
+@main.route("/api/ecdh-exchange", methods=["POST"])
+def ecdh_exchange():
+    client_pub_pem = request.json["client_public_key"].encode()
+    client_public_key = serialization.load_pem_public_key(client_pub_pem)
+    shared_key = server_private_key.exchange(ec.ECDH(), client_public_key)
+    session_key = HKDF(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=None,
+        info=b'handshake data'
+    ).derive(shared_key)
+    session["session_key"] = base64.b64encode(session_key).decode()
+    return jsonify({"success": True})

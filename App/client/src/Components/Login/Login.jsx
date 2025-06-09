@@ -8,31 +8,39 @@ import "react-toastify/dist/ReactToastify.css";
 // npm install react-toastify
 import { useDispatch } from "react-redux";
 import { loginUser } from "../../redux/apiRequest";
+import { ecdhHandshake } from '../../redux/ecdh';
 
 export default function Login() {
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const [error, setError] = useState("");
-    const navigate = useNavigate();
-    const dispatch = useDispatch();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
 
-    const handleSubmit = async (e) => {
-      e.preventDefault();
-      const user = {
-        username: username,
-        password: password
-      };
-      try {
-        const response = await loginUser(user, dispatch, navigate);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const user = { username, password };
+    try {
+      const response = await loginUser(user, dispatch, navigate);
 
-            if (response && !response.success) {
-                setError(response.message);
-            }
-      } catch (err) {
-        alert("Đăng nhập thất bại", "error", "bottom-right", 3000);
-        setError("Đăng nhập thất bại.");
+      if (response && !response.success) {
+        setError(response.message);
+      } else {
+        try {
+          const sessionKey = await ecdhHandshake();
+          localStorage.setItem('sessionKey', sessionKey);
+          alert("Đăng nhập thành công");
+          navigate("/");
+        } catch (dhError) {
+          alert("Bắt tay Diffie-Hellman thất bại: " + dhError.message);
+          setError("Bắt tay Diffie-Hellman thất bại.");
+        }
       }
-    };
+    } catch (err) {
+      alert("Đăng nhập thất bại: " + err.message);
+      setError("Đăng nhập thất bại.");
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
@@ -62,7 +70,7 @@ export default function Login() {
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500"
             />
           </div>
-          
+
           <div className="flex items-center justify-between">
             <div className="text-sm">
               <a href="#" className="text-red-600 hover:text-red-500">
@@ -72,16 +80,16 @@ export default function Login() {
           </div>
 
 
-            <button
-              type="submit"
-              className="w-full bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-4 rounded"
-              
-            >
-              Đăng nhập
-            </button>
-            
-            
-          </form>
+          <button
+            type="submit"
+            className="w-full bg-red-700 hover:bg-red-800 text-white font-semibold py-2 px-4 rounded"
+
+          >
+            Đăng nhập
+          </button>
+
+
+        </form>
 
         <p className="mt-6 text-center text-sm text-gray-600">
           Chưa có tài khoản?{" "}

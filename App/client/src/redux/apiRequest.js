@@ -34,20 +34,20 @@ export const loginUser = async (user, dispatch, navigate) => {
 
         if (error.response) {
             // Server trả về lỗi (ví dụ: 400 hoặc 401)
-            elert("Tên đăng nhập hoặc mật khẩu không đúng", "error");
+            alert("Tên đăng nhập hoặc mật khẩu không đúng", "error");
             return {
                 success: false,
                 message: error.response.data.message || "Tên đăng nhập hoặc mật khẩu không đúng",
             };
         } else if (error.request) {
-            elert("Không thể kết nối đến máy chủ. Vui lòng thử lại.", "error");
+            alert("Không thể kết nối đến máy chủ. Vui lòng thử lại.", "error");
 
             return {
                 success: false,
                 message: "Không thể kết nối đến máy chủ. Vui lòng thử lại.",
             };
         } else {
-            elert("Lỗi đăng nhập", "error");
+            alert("Lỗi đăng nhập", "error");
 
             return {
                 success: false,

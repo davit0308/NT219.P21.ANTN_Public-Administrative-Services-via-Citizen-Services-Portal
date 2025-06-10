@@ -66,6 +66,9 @@ import Header from './Components/Header/Header';
 import Footer from './Components/Footer/Footer';
 import OfficerDashboard from './Components/OfficerDashboard/OfficerDashboard';
 import { useSelector } from "react-redux";
+import { customToast } from './utils/customToast';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function AppContent() {
   const location = useLocation();
@@ -74,13 +77,14 @@ function AppContent() {
   // Xác định navbar theo route
   const isOfficerRoute = location.pathname.startsWith('/officer');
   // isOfficer true nếu user có trường admin === true
-  const isOfficer =  user?.userData.admin;
+  const isOfficer = user?.userData.admin;
 
   // Lấy role từ user trong Redux store nếu đã login
   const role = isLoggedIn?.role || null;
 
   return (
     <>
+      <ToastContainer />
       <Header />
       {isOfficer ? <OfficerNavbar /> : <Navbar />}
 
@@ -90,7 +94,7 @@ function AppContent() {
         <Route path="/login" element={isLoggedIn ? <Navigate to="/" /> : <Login />} />
         <Route path="/register" element={isLoggedIn ? <Navigate to="/" /> : <Register />} />
 
-        
+
 
         /* Trang officer — cần đăng nhập và role === 'officer' */
         <Route
@@ -111,13 +115,13 @@ function AppContent() {
               <Navigate to="/login" />
             )
           }
-        /> 
+        />
 
         {/* Các trang citizen — cần đăng nhập */}
         <Route
           path="/"
           element={
-            isLoggedIn && !isOfficer  ? (
+            isLoggedIn && !isOfficer ? (
               <Passport />
             ) : (
               <Navigate to="/login" />
@@ -127,7 +131,7 @@ function AppContent() {
         <Route
           path="/identitycard"
           element={
-            isLoggedIn && !isOfficer  ? (
+            isLoggedIn && !isOfficer ? (
               <IdentityCard />
             ) : (
               <Navigate to="/login" />
@@ -137,7 +141,7 @@ function AppContent() {
         <Route
           path="/passport"
           element={
-            isLoggedIn && !isOfficer  ? (
+            isLoggedIn && !isOfficer ? (
               <Passport />
             ) : (
               <Navigate to="/login" />

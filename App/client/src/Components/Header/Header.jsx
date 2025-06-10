@@ -12,14 +12,14 @@ export default function Header() {
 
   const handleLogout = () => {
         const res = logoutUser(dispatch, navigate);
-        try {
-            if (res) {
-                alert("Logout successfully!", "success", "top-right", 3000);
-            }
-        }
-        catch (error) {
-            alert("Logout failed!", "error", "top-right", 3000);
-        }
+        // try {
+        //     if (res) {
+        //         alert("Logout successfully!", "success", "top-right", 3000);
+        //     }
+        // }
+        // catch (error) {
+        //     alert("Logout failed!", "error", "top-right", 3000);
+        // }
     }
   return (
     <div className="px-4 py-3 flex justify-between items-center">

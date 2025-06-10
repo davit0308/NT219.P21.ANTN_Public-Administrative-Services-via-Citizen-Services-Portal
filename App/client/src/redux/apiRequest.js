@@ -1,12 +1,14 @@
 import { loginRequest, loginSuccess, loginFailure, registerFailure, registerRequest, registerSuccess, logoutRequest, logoutSuccess, logoutFailure } from "./authSlide";
 import axios from "axios"; //npm install axios
 import { resetApp } from "./resetAction";
+import api from "../api/axiosInstance";
+
 
 
 export const loginUser = async (user, dispatch, navigate) => {
     dispatch(loginRequest());
     try{
-        const res = await axios.post("http://localhost:9090/api/login", user);
+        const res = await api.post("http://localhost:9090/api/login", user);
 
         const data = res.data;
 
@@ -87,7 +89,10 @@ export const logoutUser = async (dispatch, navigate) => {
         });
         dispatch(logoutSuccess());
         dispatch(resetApp());
-        navigate("/");
+        
+        if (navigate) navigate("/");
+        else window.location.href = "/login";
+        alert("Đã đăng xuất")
     } catch (error) {
         dispatch(logoutFailure());
     }

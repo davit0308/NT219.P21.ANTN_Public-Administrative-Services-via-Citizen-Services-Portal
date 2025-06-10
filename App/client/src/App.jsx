@@ -100,6 +100,7 @@ function AppContent() {
 
   return (
     <>
+      <ToastContainer />
       <Header />
       {isOfficer ? <OfficerNavbar /> : <Navbar />}
 
@@ -133,13 +134,13 @@ function AppContent() {
               <Navigate to="/login" />
             )
           }
-        /> 
+        />
 
         {/* Các trang citizen — cần đăng nhập */}
         <Route
           path="/"
           element={
-            isLoggedIn && !isOfficer  ? (
+            isLoggedIn && !isOfficer ? (
               <Passport />
             ) : (
               <Navigate to="/login" />
@@ -149,7 +150,7 @@ function AppContent() {
         <Route
           path="/identitycard"
           element={
-            isLoggedIn && !isOfficer  ? (
+            isLoggedIn && !isOfficer ? (
               <IdentityCard />
             ) : (
               <Navigate to="/login" />
@@ -159,7 +160,7 @@ function AppContent() {
         <Route
           path="/passport"
           element={
-            isLoggedIn && !isOfficer  ? (
+            isLoggedIn && !isOfficer ? (
               <Passport />
             ) : (
               <Navigate to="/login" />

@@ -1,4 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Select from 'react-select';
+import { customToast } from '../../utils/customToast';
+import ethnicList from '../../assets/ethnic.json';
+import religionList from '../../assets/religion.json';
+import countries from '../../assets/countries.json';
 
 const steps = [
     'Đăng ký/Đăng nhập',
@@ -9,19 +14,88 @@ const steps = [
 
 export default function Passport() {
     const [step, setStep] = useState(2);
-    // State cho tên file
     const [profileFile, setProfileFile] = useState();
     const [cccdFile, setCccdFile] = useState();
     const [lastName, setLastName] = useState('');
     const [middleAndFirstName, setMiddleAndFirstName] = useState('');
+    const [provinces, setProvinces] = useState([]);
+    const [birthPlace, setBirthPlace] = useState('');
+    const [districts, setDistricts] = useState([]);
+    const [selectedProvince, setSelectedProvince] = useState('');
+    const [selectedDistrict, setSelectedDistrict] = useState('');
+    const [selectedGender, setSelectedGender] = useState('');
+    const [errors, setErrors] = useState({});
+    const [passportRequest, setPassportRequest] = useState('');
+    const [birthDate, setBirthDate] = useState('');
+    const [cccdNumber, setCccdNumber] = useState('');
+    const [cccdIssueDate, setCccdIssueDate] = useState('');
+    const [ethnic, setEthnic] = useState('');
+    const [religion, setReligion] = useState('');
+    const [phone, setPhone] = useState('');
+    const [email, setEmail] = useState('');
+
+    const validateStep3 = () => {
+        const newErrors = {};
+        if (!lastName.trim()) newErrors.lastName = 'Bắt buộc nhập';
+        if (!middleAndFirstName.trim()) newErrors.middleAndFirstName = 'Bắt buộc nhập';
+        if (!birthPlace) newErrors.birthPlace = 'Bắt buộc nhập';
+        if (!selectedGender) newErrors.selectedGender = 'Bắt buộc nhập';
+        if (!birthDate) newErrors.birthDate = 'Bắt buộc nhập';
+        if (!cccdNumber) newErrors.cccdNumber = 'Bắt buộc nhập';
+        if (!cccdIssueDate) newErrors.cccdIssueDate = 'Bắt buộc nhập';
+        if (!ethnic) newErrors.ethnic = 'Bắt buộc nhập';
+        if (!religion) newErrors.religion = 'Bắt buộc nhập';
+        if (!phone) newErrors.phone = 'Bắt buộc nhập';
+        if (!email) newErrors.email = 'Bắt buộc nhập';
+        if (!selectedProvince) newErrors.selectedProvince = 'Bắt buộc nhập';
+        if (!passportRequest) newErrors.passportRequest = 'Bắt buộc nhập';
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
     const handleNextStep = () => {
+        if (step === 3) {
+            if (!validateStep3()) {
+                customToast('Vui lòng nhập đầy đủ các trường bắt buộc!', 'error');
+                return;
+            }
+        }
         if (step < steps.length) setStep((prev) => prev + 1);
     };
 
     const handlePrevStep = () => {
         if (step > 1) setStep((prev) => prev - 1);
     };
+
+    useEffect(() => {
+        fetch('https://provinces.open-api.vn/api/p/')
+            .then(res => res.json())
+            .then(data => setProvinces(data));
+    }, []);
+
+    useEffect(() => {
+        if (selectedProvince) {
+            fetch(`https://provinces.open-api.vn/api/p/${selectedProvince}?depth=2`)
+                .then(res => res.json())
+                .then(data => setDistricts(data.districts || []));
+        } else {
+            setDistricts([]);
+        }
+    }, [selectedProvince]);
+
+    // Tạo options cho react-select
+    const provinceOptions = provinces.map(p => ({ value: p.code, label: p.name }));
+    const districtOptions = districts.map(d => ({ value: d.code, label: d.name }));
+    const birthPlaceOptions = [
+        {
+            label: 'Việt Nam',
+            options: provinces.map(p => ({ value: p.name, label: p.name }))
+        },
+        {
+            label: 'Các nước khác',
+            options: countries.map(c => ({ value: c.name, label: c.name }))
+        }
+    ];
 
     return (
         <div className="min-h-screen bg-gray-50 py-12 px-0 flex justify-center items-start w-full">
@@ -68,19 +142,16 @@ export default function Passport() {
                         </h3>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-lg text-gray-700 mb-1">
                                 Cơ quan giải quyết hồ sơ
                             </label>
                             <select className="select select-bordered w-full">
                                 <option>Cục Quản lý xuất nhập cảnh</option>
-                                <option>
-                                    Phòng Quản lý xuất nhập cảnh Công an tỉnh/thành phố
-                                </option>
                             </select>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-lg text-gray-700 mb-1">
                                 Trường hợp giải quyết
                             </label>
                             <select className="select select-bordered w-full">
@@ -121,7 +192,7 @@ export default function Passport() {
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             {/* Họ, Tên đệm và tên, Họ và tên, Giới tính */}
                             <div className="col-span-1">
-                                <label className="block mb-1 font-medium">1. Họ (phải nhập đầy đủ nếu có)</label>
+                                <label className="block mb-1 font-medium text-lg">1. Họ (phải nhập đầy đủ nếu có)</label>
                                 <input
                                     className="w-full border border-gray-300 rounded px-3 py-2"
                                     placeholder="NGUYỄN"
@@ -130,16 +201,17 @@ export default function Passport() {
                                 />
                             </div>
                             <div className="col-span-1">
-                                <label className="block mb-1 font-medium">Tên đệm và tên</label>
+                                <label className="block mb-1 font-medium text-lg">Tên đệm và tên <span className="text-red-500">*</span></label>
                                 <input
-                                    className="w-full border border-gray-300 rounded px-3 py-2"
+                                    className={`w-full border border-gray-300 rounded px-3 py-2 ${errors.middleAndFirstName ? 'border-red-500' : ''}`}
                                     placeholder="VĂN A"
                                     value={middleAndFirstName}
                                     onChange={e => setMiddleAndFirstName(e.target.value)}
                                 />
+                                {errors.middleAndFirstName && <div className="text-red-500 text-sm">{errors.middleAndFirstName}</div>}
                             </div>
                             <div className="col-span-1">
-                                <label className="block mb-1 font-medium">Họ và tên <span className="text-red-500">*</span></label>
+                                <label className="block mb-1 font-medium text-lg">Họ và tên <span className="text-red-500">*</span></label>
                                 <input
                                     className="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100"
                                     placeholder="NGUYỄN VĂN A"
@@ -148,157 +220,254 @@ export default function Passport() {
                                 />
                             </div>
                             <div className="col-span-1">
-                                <label className="block mb-1 font-medium">2. Giới tính <span className="text-red-500">*</span></label>
-                                <select className="w-full border border-gray-300 rounded px-3 py-2">
-                                    <option>Nam</option>
-                                    <option>Nữ</option>
+                                <label className="block mb-1 font-medium text-lg">2. Giới tính <span className="text-red-500">*</span></label>
+                                <select
+                                    className="w-full border border-gray-300 rounded px-3 py-2"
+                                    value={selectedGender}
+                                    onChange={e => setSelectedGender(e.target.value)}
+                                >
+                                    <option value="">-- Chọn giới tính --</option>
+                                    <option value="Nam">Nam</option>
+                                    <option value="Nữ">Nữ</option>
                                 </select>
+                                {errors.selectedGender && <div className="text-red-500 text-sm">{errors.selectedGender}</div>}
                             </div>
                             {/* Sinh ngày, Nơi sinh, Số CCCD, Ngày cấp */}
                             <div className="col-span-1">
-                                <label className="block mb-1 font-medium">3. Sinh ngày <span className="text-red-500">*</span></label>
-                                <input type="date" className="w-full border border-gray-300 rounded px-3 py-2" />
+                                <label className="block mb-1 font-medium text-lg">3. Sinh ngày <span className="text-red-500">*</span></label>
+                                <input
+                                    type="date"
+                                    className={`w-full border border-gray-300 rounded px-3 py-2 ${errors.birthDate ? 'border-red-500' : ''}`}
+                                    value={birthDate}
+                                    onChange={e => setBirthDate(e.target.value)}
+                                />
+                                {errors.birthDate && <div className="text-red-500 text-sm">{errors.birthDate}</div>}
                             </div>
                             <div className="col-span-3">
-                                <label className="block mb-1 font-medium">Nơi sinh (theo giấy khai sinh) <span className="text-red-500">*</span></label>
-                                <select className="w-full border border-gray-300 rounded px-3 py-2">
-                                    <option>-- Chưa chọn --</option>
-                                </select>
+                                <label className="block mb-1 font-medium text-lg">
+                                    Nơi sinh (theo giấy khai sinh) <span className="text-red-500">*</span>
+                                </label>
+                                <Select
+                                    options={birthPlaceOptions}
+                                    value={birthPlace ? { value: birthPlace, label: birthPlace } : null}
+                                    onChange={option => setBirthPlace(option?.value || '')}
+                                    placeholder="Chọn nơi sinh..."
+                                    isClearable
+                                />
+                                {errors.birthPlace && <div className="text-red-500 text-sm">{errors.birthPlace}</div>}
                             </div>
                             <div className="col-span-1">
-                                <label className="block mb-1 font-medium">4. Số CCCD/Số định danh <span className="text-red-500">*</span></label>
-                                <input className="w-full border border-gray-300 rounded px-3 py-2" placeholder="066205004143" />
+                                <label className="block mb-1 font-medium text-lg">4. Số CCCD/Số định danh <span className="text-red-500">*</span></label>
+                                <input
+                                    type="date"
+                                    className={`w-full border border-gray-300 rounded px-3 py-2 ${errors.birthDate ? 'border-red-500' : ''}`}
+                                    value={birthDate}
+                                    onChange={e => setBirthDate(e.target.value)}
+                                />
+                                {errors.birthDate && <div className="text-red-500 text-sm">{errors.birthDate}</div>}
                             </div>
                             <div className="col-span-1">
-                                <label className="block mb-1 font-medium">Ngày cấp <span className="text-red-500">*</span></label>
-                                <input type="date" className="w-full border border-gray-300 rounded px-3 py-2" />
+                                <label className="block mb-1 font-medium text-lg">Ngày cấp <span className="text-red-500">*</span></label>
+                                <input
+                                    type="date"
+                                    className={`w-full border border-gray-300 rounded px-3 py-2 ${errors.cccdIssueDate ? 'border-red-500' : ''}`}
+                                    value={cccdIssueDate}
+                                    onChange={e => setCccdIssueDate(e.target.value)}
+                                />
+                                {errors.cccdIssueDate && <div className="text-red-500 text-sm">{errors.cccdIssueDate}</div>}
                             </div>
                             {/* Nơi cấp, Dân tộc, Tôn giáo, Số điện thoại */}
                             <div className="col-span-2">
-                                <label className="block mb-1 font-medium">Nơi cấp</label>
+                                <label className="block mb-1 font-medium text-lg">Nơi cấp</label>
                                 <select className="w-full border border-gray-300 rounded px-3 py-2">
                                     <option>Cục Cảnh sát quản lý hành chính về trật tự xã hội</option>
                                 </select>
                             </div>
                             <div className="col-span-1">
-                                <label className="block mb-1 font-medium">5. Dân tộc <span className="text-red-500">*</span></label>
-                                <select className="w-full border border-gray-300 rounded px-3 py-2">
-                                    <option>Kinh</option>
-                                    <option>Khác</option>
+                                <label className="block mb-1 font-medium text-lg">5. Dân tộc <span className="text-red-500">*</span></label>
+                                <select
+                                    className={`w-full border border-gray-300 rounded px-3 py-2 ${errors.ethnic ? 'border-red-500' : ''}`}
+                                    value={ethnic}
+                                    onChange={e => setEthnic(e.target.value)}
+                                >
+                                    <option value="">-- Chọn dân tộc --</option>
+                                    {ethnicList.map((item) => (
+                                        <option key={item} value={item}>{item}</option>
+                                    ))}
                                 </select>
+                                {errors.ethnic && <div className="text-red-500 text-sm">{errors.ethnic}</div>}
                             </div>
                             <div className="col-span-1">
-                                <label className="block mb-1 font-medium">6. Tôn giáo <span className="text-red-500">*</span></label>
-                                <select className="w-full border border-gray-300 rounded px-3 py-2">
-                                    <option>Không</option>
-                                    <option>Có</option>
+                                <label className="block mb-1 font-medium text-lg">6. Tôn giáo <span className="text-red-500">*</span></label>
+                                <select
+                                    className={`w-full border border-gray-300 rounded px-3 py-2 ${errors.ethnic ? 'border-red-500' : ''}`}
+                                    value={ethnic}
+                                    onChange={e => setEthnic(e.target.value)}
+                                >
+                                    <option value="">-- Chọn dân tộc --</option>
+                                    {ethnicList.map((item) => (
+                                        <option key={item} value={item}>{item}</option>
+                                    ))}
                                 </select>
+                                {errors.ethnic && <div className="text-red-500 text-sm">{errors.ethnic}</div>}
                             </div>
                             <div className="col-span-1">
-                                <label className="block mb-1 font-medium">7. Số điện thoại <span className="text-red-500">*</span></label>
-                                <input className="w-full border border-gray-300 rounded px-3 py-2" placeholder="Nhập số điện thoại" />
+                                <label className="block mb-1 font-medium text-lg">7. Số điện thoại <span className="text-red-500">*</span></label>
+                                <input
+                                    className={`w-full border border-gray-300 rounded px-3 py-2 ${errors.phone ? 'border-red-500' : ''}`}
+                                    placeholder="Nhập số điện thoại"
+                                    value={phone}
+                                    onChange={e => setPhone(e.target.value)}
+                                />
+                                {errors.phone && <div className="text-red-500 text-sm">{errors.phone}</div>}
                             </div>
                             {/* Email, Địa chỉ thường trú, Quận/huyện, ... */}
                             <div className="col-span-1">
-                                <label className="block mb-1 font-medium">Email <span className="text-red-500">*</span></label>
-                                <input className="w-full border border-gray-300 rounded px-3 py-2" placeholder="Nhập email" />
+                                <label className="block mb-1 font-medium text-lg">Email <span className="text-red-500">*</span></label>
+                                <input
+                                    className={`w-full border border-gray-300 rounded px-3 py-2 ${errors.email ? 'border-red-500' : ''}`}
+                                    placeholder="Nhập email"
+                                    value={email}
+                                    onChange={e => setEmail(e.target.value)}
+                                />
+                                {errors.email && <div className="text-red-500 text-sm">{errors.email}</div>}
+                            </div>
+                            {/* Địa chỉ thường trú (ghi theo sổ hộ khẩu) */}
+                            <div className="col-span-2">
+                                <label className="block mb-1 font-medium text-lg">
+                                    8. Địa chỉ thường trú (ghi theo sổ hộ khẩu) <span className="text-red-500">*</span>
+                                </label>
+                                <Select
+                                    options={provinceOptions}
+                                    value={provinceOptions.find(opt => opt.value === selectedProvince) || null}
+                                    onChange={option => {
+                                        setSelectedProvince(option?.value || '');
+                                        setSelectedDistrict('');
+                                    }}
+                                    placeholder="Chọn tỉnh/thành..."
+                                    isClearable
+                                />
+                                {errors.selectedProvince && <div className="text-red-500 text-sm">{errors.selectedProvince}</div>}
                             </div>
                             <div className="col-span-2">
-                                <label className="block mb-1 font-medium">8. Địa chỉ thường trú (ghi theo sổ hộ khẩu) <span className="text-red-500">*</span></label>
-                                <select className="w-full border border-gray-300 rounded px-3 py-2">
-                                    <option>Tỉnh Đắk Lắk</option>
-                                </select>
-                            </div>
-                            <div className="col-span-2">
-                                <label className="block mb-1 font-medium">Quận/huyện</label>
-                                <select className="w-full border border-gray-300 rounded px-3 py-2">
-                                    <option>Huyện Ea Kar</option>
-                                </select>
+                                <label className="block mb-1 font-medium text-lg">Quận/huyện</label>
+                                <Select
+                                    options={districtOptions}
+                                    value={districtOptions.find(opt => opt.value === selectedDistrict) || null}
+                                    onChange={option => setSelectedDistrict(option?.value || '')}
+                                    placeholder="Chọn quận/huyện..."
+                                    isClearable
+                                    isDisabled={!selectedProvince}
+                                />
                             </div>
 
                             <div className="col-span-4">
                                 <input className="w-full border border-gray-300 rounded px-3 py-2" placeholder='Số nhà, tên đường, thôn/xóm/khu phố, xã' />
                             </div>
                             <div className="col-span-2">
-                                <label className="block mb-1 font-medium">9. Địa chỉ tạm trú (ghi theo sổ tạm trú)</label>
-                                <select className="w-full border border-gray-300 rounded px-3 py-2">
-                                    <option>Tỉnh Bình Dương</option>
-                                </select>
+                                <label className="block mb-1 font-medium text-lg">9. Địa chỉ tạm trú (ghi theo sổ tạm trú)</label>
+                                <Select
+                                    options={provinceOptions}
+                                    value={provinceOptions.find(opt => opt.value === selectedProvince) || null}
+                                    onChange={option => {
+                                        setSelectedProvince(option?.value || '');
+                                        setSelectedDistrict('');
+                                    }}
+                                    placeholder="Chọn tỉnh/thành..."
+                                    isClearable
+                                />
                             </div>
                             {/* Số nhà, Quận/Huyện tạm trú */}
 
                             <div className="col-span-2">
-                                <label className="block mb-1 font-medium">Quận/Huyện</label>
-                                <select className="w-full border border-gray-300 rounded px-3 py-2">
-                                    <option>Thành phố Dĩ An</option>
-                                </select>
+                                <label className="block mb-1 font-medium text-lg">Quận/Huyện</label>
+                                <Select
+                                    options={districtOptions}
+                                    value={districtOptions.find(opt => opt.value === selectedDistrict) || null}
+                                    onChange={option => setSelectedDistrict(option?.value || '')}
+                                    placeholder="Chọn quận/huyện..."
+                                    isClearable
+                                    isDisabled={!selectedProvince}
+                                />
                             </div>
                             <div className="col-span-4">
                                 <input className="w-full border border-gray-300 rounded px-3 py-2" placeholder='Số nhà, tên đường, thôn/xóm/khu phố, xã' />
                             </div>
                             {/* Nghề nghiệp, Tên và địa chỉ cơ quan */}
                             <div className="col-span-2">
-                                <label className="block mb-1 font-medium">10. Nghề Nghiệp</label>
+                                <label className="block mb-1 font-medium text-lg">10. Nghề Nghiệp</label>
                                 <input className="w-full border border-gray-300 rounded px-3 py-2" placeholder="Nghề nghiệp" />
                             </div>
                             <div className="col-span-2">
-                                <label className="block mb-1 font-medium">11. Tên và địa chỉ cơ quan</label>
+                                <label className="block mb-1 font-medium text-lg">11. Tên và địa chỉ cơ quan</label>
                                 <input className="w-full border border-gray-300 rounded px-3 py-2" placeholder="Nhập tên cơ quan - Địa chỉ cơ quan" />
                             </div>
                             {/* Họ tên Cha, Họ tên Mẹ, Họ tên Vợ/Chồng */}
                             <div className="col-span-2">
-                                <label className="block mb-1 font-medium">12. Họ tên Cha (phải nhập đầy đủ nếu có)</label>
+                                <label className="block mb-1 font-medium text-lg">12. Họ tên Cha (phải nhập đầy đủ nếu có)</label>
                                 <input className="w-full border border-gray-300 rounded px-3 py-2" />
                             </div>
                             <div className="col-span-2">
-                                <label className="block mb-1 font-medium">Ngày sinh <span className="text-red-500">*</span></label>
+                                <label className="block mb-1 font-medium text-lg">Ngày sinh</label>
                                 <input type="date" className="w-full border border-gray-300 rounded px-3 py-2" placeholder="Nhập ngày sinh cha" />
                             </div>
                             <div className="col-span-2">
-                                <label className="block mb-1 font-medium">Họ tên Mẹ (phải nhập đầy đủ nếu có)</label>
+                                <label className="block mb-1 font-medium text-lg">Họ tên Mẹ (phải nhập đầy đủ nếu có)</label>
                                 <input className="w-full border border-gray-300 rounded px-3 py-2" />
                             </div>
                             <div className="col-span-2">
-                                <label className="block mb-1 font-medium">Ngày sinh <span className="text-red-500">*</span></label>
+                                <label className="block mb-1 font-medium text-lg">Ngày sinh</label>
                                 <input type="date" className="w-full border border-gray-300 rounded px-3 py-2" placeholder="Nhập ngày sinh mẹ" />
                             </div>
                             <div className="col-span-2">
-                                <label className="block mb-1 font-medium">Họ tên Vợ/Chồng</label>
+                                <label className="block mb-1 font-medium text-lg">Họ tên Vợ/Chồng</label>
                                 <input className="w-full border border-gray-300 rounded px-3 py-2" placeholder="Nhập họ tên Vợ/Chồng" />
                             </div>
 
                             <div className="col-span-2">
-                                <label className="block mb-1 font-medium">Ngày sinh</label>
+                                <label className="block mb-1 font-medium text-lg">Ngày sinh</label>
                                 <input type="date" className="w-full border border-gray-300 rounded px-3 py-2" placeholder="Nhập ngày sinh Vợ/Chồng" />
                             </div>
                             {/* Hộ chiếu phổ thông gần nhất, Ngày cấp, Nơi cấp hộ chiếu */}
                             <div className="col-span-2">
-                                <label className="block mb-1 font-medium">Hộ chiếu phổ thông gần nhất</label>
+                                <label className="block mb-1 font-medium text-lg">Hộ chiếu phổ thông gần nhất</label>
                                 <input className="w-full border border-gray-300 rounded px-3 py-2" placeholder="Nhập số hộ chiếu cũ" />
                             </div>
                             <div className="col-span-1">
-                                <label className="block mb-1 font-medium">Ngày cấp</label>
+                                <label className="block mb-1 font-medium text-lg">Ngày cấp</label>
                                 <input type="date" className="w-full border border-gray-300 rounded px-3 py-2" />
                             </div>
                             <div className="col-span-1">
-                                <label className="block mb-1 font-medium">Nơi cấp hộ chiếu</label>
+                                <label className="block mb-1 font-medium text-lg">Nơi cấp hộ chiếu</label>
                                 <input className="w-full border border-gray-300 rounded px-3 py-2" placeholder="Nơi cấp hộ chiếu" />
                             </div>
                             {/* Nội dung đề nghị, Chi tiết nội dung đề nghị */}
                             <div className="col-span-2">
-                                <label className="block mb-1 font-medium">14. Nội dung đề nghị: Cấp hộ chiếu <span className="text-red-500">*</span></label>
-                                <select className="w-full border border-gray-300 rounded px-3 py-2">
-                                    <option>-- Chưa chọn --</option>
+                                <label className="block mb-1 font-medium text-lg">14. Nội dung đề nghị: Cấp hộ chiếu <span className="text-red-500">*</span></label>
+                                <select
+                                    className={`w-full border border-gray-300 rounded px-3 py-2 ${errors.passportRequest ? 'border-red-500' : ''}`}
+                                    value={passportRequest}
+                                    onChange={e => setPassportRequest(e.target.value)}
+                                >
+                                    <option value="">-- Chưa chọn --</option>
+                                    <option>Cấp hộ chiếu lần đầu</option>
+                                    <option>Cấp lại hộ chiếu do hộ chiếu cũ hết hạn</option>
+                                    <option>Cấp lại hộ chiếu do hộ chiếu cũ sắp hết hạn</option>
+                                    <option>Cấp lại hộ chiếu do hộ chiếu cũ hết trang</option>
+                                    <option>Cấp lại hộ chiếu do bị mất</option>
+                                    <option>Cấp lại hộ chiếu do bị hư hỏng</option>
+                                    <option>Đề nghị khác</option>
                                 </select>
+                                {errors.passportRequest && <div className="text-red-500 text-sm">{errors.passportRequest}</div>}
                             </div>
                             <div className="col-span-2">
-                                <label className="block mb-1 font-medium">Chi tiết nội dung đề nghị</label>
+                                <label className="block mb-1 font-medium text-lg">Chi tiết nội dung đề nghị</label>
                                 <input className="w-full border border-gray-300 rounded px-3 py-2" placeholder="Nhập chi tiết nội dung đề nghị nếu có" />
                             </div>
 
                             {/* Upload ảnh chân dung */}
                             <div className="col-span-4">
-                                <label className="block mb-1 font-medium">Tải ảnh chân dung</label>
+                                <label className="block mb-1 font-medium text-lg">Tải ảnh chân dung</label>
                                 <div className="flex items-center w-full border border-gray-300 rounded px-3 py-2 bg-white">
                                     <label
                                         htmlFor="profileFile"
@@ -332,7 +501,7 @@ export default function Passport() {
 
                             {/* Upload ảnh CCCD mặt trước */}
                             <div className="col-span-4">
-                                <label className="block mb-1 font-medium">Tải ảnh CCCD mặt trước</label>
+                                <label className="block mb-1 font-medium text-lg">Tải ảnh CCCD mặt trước</label>
                                 <div className="flex items-center w-full border border-gray-300 rounded px-3 py-2 bg-white">
                                     <label
                                         htmlFor="cccdFrontFile"
@@ -366,7 +535,7 @@ export default function Passport() {
 
                             {/* Upload ảnh CCCD mặt sau */}
                             <div className="col-span-4">
-                                <label className="block mb-1 font-medium">Tải ảnh CCCD mặt sau</label>
+                                <label className="block mb-1 font-medium text-lg">Tải ảnh CCCD mặt sau</label>
                                 <div className="flex items-center w-full border border-gray-300 rounded px-3 py-2 bg-white">
                                     <label
                                         htmlFor="cccdBackFile"
@@ -397,9 +566,23 @@ export default function Passport() {
                                     )}
                                 </div>
                             </div>
+                            {/* Loại hộ chiếu đề nghị cấp */}
+                            <div className="mt-2 w-200">
+                                <label className="block mb-1 font-medium text-lg">Chọn loại hộ chiếu đề nghị cấp</label>
+                                <div className="flex items-center">
+                                    <div className="flex items-center mr-6">
+                                        <input type="radio" name="radio-10" className="radio radio-xs radio-error mr-2" defaultChecked />
+                                        <span>Cấp hộ chiếu không gắn chip điện tử</span>
+                                    </div>
+                                    <div className="flex items-center">
+                                        <input type="radio" name="radio-10" className="radio radio-xs radio-error mr-2" />
+                                        <span>Cấp hộ chiếu có gắn chip điện tử</span>
+                                    </div>
+                                </div>
+                            </div>
                             {/* Mã xác thực */}
                             <div className="col-span-4">
-                                <label className="block mb-1 font-medium">Mã xác thực</label>
+                                <label className="block mb-1 font-medium text-lg">Mã xác thực</label>
                                 <input className="w-full border border-gray-300 rounded px-3 py-2" placeholder="Mã xác thực" />
                             </div>
                         </div>

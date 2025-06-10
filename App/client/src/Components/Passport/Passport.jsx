@@ -158,9 +158,6 @@ export default function Passport() {
                                 <option>
                                     5 ngày làm việc - Cấp hộ chiếu phổ thông cho người từ 14 tuổi
                                 </option>
-                                <option>
-                                    5 ngày làm việc - Cấp hộ chiếu phổ thông cho trẻ em dưới 14 tuổi
-                                </option>
                             </select>
                         </div>
 

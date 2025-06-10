@@ -8,7 +8,7 @@ const steps = [
 ];
 
 export default function IdentityCard() {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(2);
   const [selectedDate, setSelectedDate] = useState(null);
   // Thêm state cho tháng/năm của calendar
   const today = new Date();
@@ -36,8 +36,8 @@ export default function IdentityCard() {
             <td key={d}>
               <button
                 className={`w-8 h-8 rounded-full ${isSelected
-                    ? "bg-indigo-600 text-white"
-                    : "hover:bg-indigo-100"
+                  ? "bg-indigo-600 text-white"
+                  : "hover:bg-indigo-100"
                   }`}
                 onClick={() =>
                   setSelectedDate(new Date(calendarYear, calendarMonth, dayNumber))
@@ -165,9 +165,9 @@ export default function IdentityCard() {
               <div className="bg-red-100 px-4 py-2 rounded-t-lg flex items-center">
                 <h3 className="text-lg font-bold flex-1">THÔNG TIN NGƯỜI KÊ KHAI</h3>
               </div>
-              <div className="p-4 space-y-4">
+              <div className="p-4 col-span-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                  <div className="col-span-1">
                     <label className="block font-medium">
                       Họ, chữ đệm và tên <span className="text-red-600">*</span>
                     </label>
@@ -177,22 +177,29 @@ export default function IdentityCard() {
                       className="form-control w-full border rounded px-3 py-2"
                     />
                   </div>
-                  <div>
-                    <label className="block font-medium">
-                      Ngày, tháng, năm sinh <span className="text-red-600">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        className="form-control w-full border rounded px-3 py-2"
-                        id="txtBIRTHDATE_NDN"
-                        autoComplete="off"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </span>
+                  <div className="col-span-1">
+                    <div className="flex gap-4">
+                      <div className="flex-1">
+                        <label className="block font-medium" type="date">
+                          Ngày, tháng, năm sinh <span className="text-red-600">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="form-control w-full border rounded px-3 py-2"
+                          id="txtBIRTHDATE_NDN"
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block font-medium">
+                          Giới tính <span className="text-red-600">*</span>
+                        </label>
+                        <select className="form-control w-full border rounded px-3 py-2">
+                          <option value="">-- Chọn giới tính --</option>
+                          <option value="Nam">Nam</option>
+                          <option value="Nữ">Nữ</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>

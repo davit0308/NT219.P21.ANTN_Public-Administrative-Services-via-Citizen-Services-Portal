@@ -100,7 +100,6 @@ function AppContent() {
 
   return (
     <>
-      <ToastContainer />
       <Header />
       {isOfficer ? <OfficerNavbar /> : <Navbar />}
 

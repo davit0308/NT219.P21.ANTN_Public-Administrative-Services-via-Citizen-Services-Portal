@@ -12,7 +12,7 @@ import base64
 
 from mongoengine import connect
 
-from flask_cors import cross_origin
+from flask_cors import cross_origin,CORS
 import os
 from dotenv import load_dotenv
 from .models.User import User
@@ -22,6 +22,8 @@ ACCESS_KEY = os.getenv("ACCESS_KEY")
 
 main = Blueprint("main", __name__)
 bcrypt = Bcrypt()
+
+CORS(main, supports_credentials=True, origins=["http://localhost:3000"])
 # # Giả lập user trong DB (username + hashed password + id)
 # users = {
 #     "User": {
@@ -74,7 +76,7 @@ def login():
         "id": str(user["id"]),
         "username": user["username"],
         "admin": user["admin"],
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=3)
+        "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=3)
     }
     access_token = jwt.encode(access_payload, ACCESS_KEY, algorithm="HS256")
 
@@ -83,7 +85,7 @@ def login():
         "id": str(user["id"]),
         "username": user["username"],
         "admin": user["admin"],
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(days=3)
+        "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=3)
     }
     refresh_token = jwt.encode(refresh_payload, ACCESS_KEY, algorithm="HS256")
 
@@ -116,7 +118,7 @@ def refresh_token():
             "id": data["id"],
             "username": data["username"],
             "admin": data["admin"],
-            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+            "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=3)
         }, ACCESS_KEY, algorithm="HS256")
 
         return jsonify({"success": True, "token": new_access_token}), 200
@@ -126,7 +128,7 @@ def refresh_token():
     except jwt.InvalidTokenError:
         return jsonify({"success": False, "message": "Refresh token không hợp lệ"}), 403
 
-
+ 
 @main.route("/api/logout", methods=["POST"])
 @cross_origin(origin="http://localhost:3000", supports_credentials=True)
 def logout():

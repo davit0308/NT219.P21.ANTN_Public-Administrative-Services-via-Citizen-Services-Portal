@@ -29,10 +29,10 @@ export default function Login() {
         try {
           const sessionKey = await ecdhHandshake();
           localStorage.setItem('sessionKey', sessionKey);
-          alert("Đăng nhập thành công");
+          console.log("Bắt tay thành công");
           navigate("/");
         } catch (dhError) {
-          alert("Bắt tay Diffie-Hellman thất bại: " + dhError.message);
+          console.log("Bắt tay Diffie-Hellman thất bại: " + dhError.message);
           setError("Bắt tay Diffie-Hellman thất bại.");
         }
       }

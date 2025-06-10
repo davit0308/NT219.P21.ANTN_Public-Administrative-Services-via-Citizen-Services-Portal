@@ -12,7 +12,7 @@ import base64
 
 from mongoengine import connect
 
-from flask_cors import cross_origin
+from flask_cors import cross_origin,CORS
 import os
 from dotenv import load_dotenv
 from .models.User import User
@@ -22,6 +22,8 @@ ACCESS_KEY = os.getenv("ACCESS_KEY")
 
 main = Blueprint("main", __name__)
 bcrypt = Bcrypt()
+
+CORS(main, supports_credentials=True, origins=["http://localhost:3000"])
 # # Giả lập user trong DB (username + hashed password + id)
 # users = {
 #     "User": {
@@ -69,27 +71,64 @@ def login():
     if not user or not bcrypt.check_password_hash(user["password"], password):
         return jsonify({"success": False, "message": "Tên đăng nhập hoặc mật khẩu không đúng"}), 401
 
-    # Tạo JWT token
-    payload = {
+    # Tạo access token (3 giờ)
+    access_payload = {
         "id": str(user["id"]),
         "username": user["username"],
         "admin": user["admin"],
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+        "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=3)
     }
-    token = jwt.encode(payload, ACCESS_KEY, algorithm="HS256")
+    access_token = jwt.encode(access_payload, ACCESS_KEY, algorithm="HS256")
 
-    return jsonify({
+    # Tạo refresh token (3 ngày)
+    refresh_payload = {
+        "id": str(user["id"]),
+        "username": user["username"],
+        "admin": user["admin"],
+        "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=3)
+    }
+    refresh_token = jwt.encode(refresh_payload, ACCESS_KEY, algorithm="HS256")
+
+    response = make_response(jsonify({
         "success": True,
         "message": "Đăng nhập thành công",
-        "token": token,
+        "token": access_token,
         "userData": {
             "username": username,
             "name": user["name"],
             "admin": user["admin"],
-            
         }
-    }), 200
+    }))
+    # Set refresh token trong cookie (HttpOnly, Secure)
+    response.set_cookie("refresh_token", refresh_token, httponly=True, samesite="Strict", max_age=3*24*60*60)
 
+    return response
+
+@main.route("/api/refresh-token", methods=["POST"])
+def refresh_token():
+    refresh_token = request.cookies.get("refresh_token")
+
+    if not refresh_token:
+        return jsonify({"success": False, "message": "Không có refresh token"}), 401
+
+    try:
+        data = jwt.decode(refresh_token, ACCESS_KEY, algorithms=["HS256"])
+        # Tạo lại access token mới
+        new_access_token = jwt.encode({
+            "id": data["id"],
+            "username": data["username"],
+            "admin": data["admin"],
+            "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=3)
+        }, ACCESS_KEY, algorithm="HS256")
+
+        return jsonify({"success": True, "token": new_access_token}), 200
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({"success": False, "message": "Refresh token đã hết hạn"}), 403
+    except jwt.InvalidTokenError:
+        return jsonify({"success": False, "message": "Refresh token không hợp lệ"}), 403
+
+ 
 @main.route("/api/logout", methods=["POST"])
 @cross_origin(origin="http://localhost:3000", supports_credentials=True)
 def logout():

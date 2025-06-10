@@ -62,39 +62,57 @@ import IdentityCard from './Components/IdentityCard/IdentityCard';
 import Passport from './Components/Passport/Passport';
 import Login from './Components/Login/Login';
 import Register from './Components/Register/Register';
+import Support from './Components/Login/Login';
+
 import Header from './Components/Header/Header';
 import Footer from './Components/Footer/Footer';
 import OfficerDashboard from './Components/OfficerDashboard/OfficerDashboard';
 import { useSelector } from "react-redux";
-import { customToast } from './utils/customToast';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { logoutUser } from "./redux/apiRequest";
+import { useNavigate } from "react-router-dom";
+import { startTokenRefreshInterval } from "./api/tokenManager";
+
 
 function AppContent() {
   const location = useLocation();
   const isLoggedIn = useSelector((state) => state.auth.login.currentUser);
   const user = useSelector((state) => state.auth.login?.currentUser);
-  // Xác định navbar theo route
   const isOfficerRoute = location.pathname.startsWith('/officer');
-  // isOfficer true nếu user có trường admin === true
   const isOfficer = user?.userData.admin;
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
+  // TỰ ĐỘNG LOGOUT NẾU TOKEN KHÔNG CÒN
+  useEffect(() => {
+    const accessToken = localStorage.getItem("token");
+    if (!accessToken && isLoggedIn) {
+      logoutUser(dispatch, navigate);
+    }
+  }, [isLoggedIn, dispatch, navigate]);
+
+    useEffect(() => {
+      startTokenRefreshInterval(); // Bắt đầu kiểm tra tự động
+    }, []);
   // Lấy role từ user trong Redux store nếu đã login
   const role = isLoggedIn?.role || null;
 
   return (
     <>
-      <ToastContainer />
       <Header />
       {isOfficer ? <OfficerNavbar /> : <Navbar />}
 
       <Routes>
         {/* Trang public cho tất cả */}
         <Route path="/" element={<Home />} />
+        <Route path="/support" element={<Support />} /> {/* Tạm thời dẫn tới login*/}
+
         <Route path="/login" element={isLoggedIn ? <Navigate to="/" /> : <Login />} />
         <Route path="/register" element={isLoggedIn ? <Navigate to="/" /> : <Register />} />
 
 
+        
 
         /* Trang officer — cần đăng nhập và role === 'officer' */
         <Route

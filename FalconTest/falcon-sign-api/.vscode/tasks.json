@@ -1,0 +1,107 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "C/C++: MMH clang++.exe build active file",
+			"command": "C:\\msys64\\mingw64\\bin\\clang++.exe",
+			"args": [
+				"-g2", //optimal
+				"-O3", //optimal
+				"-DNDEBUG",//optimal : debug or release
+				"${file}", //input (LẤY TẤT CẢ FILE TẠI THƯ MỤC HIỆN THỜI)
+				"-o",
+				"${fileDirname}\\${fileBasenameNoExtension}.exe",
+				"-D_WIN32_WINNT= 0x0A00",//window vesion
+				"-lpthread", //parallel
+				"-LD:\\cryptolibrary\\lib\\cryptopp\\clang", //library dir
+				"-l:libcryptopp.a", //thư viện dùng -lcryptopp
+				"-ID:\\cryptolibrary\\include", //header file dir
+				"-Wall"
+
+			],
+			"options": {
+				"cwd": "${fileDirname}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build",
+			"detail": "compiler: C:\\msys64\\mingw64\\bin\\clang++.exe"
+		},
+
+		{
+			"type": "shell",
+			"label": "C/C++: g++.exe build active file",
+			"command": "C:\\msys64\\mingw64\\bin\\g++.exe",
+			"args": [
+				"-g2",
+				"-O3",
+				"-DNDEBUG",
+				"${file}",
+				"-o",
+				"${fileDirname}\\${fileBasenameNoExtension}.exe",
+				"-D_WIN32_WINNT= 0x0A00",
+				"-lpthread",
+				"-LD:\\cryptolibrary\\lib\\cryptopp\\gcc",
+				"-l:libcryptopp.a",
+				"-ID:\\cryptolibrary\\include",
+				"-Wall"
+			],
+			"options": {
+				"cwd": "${fileDirname}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build",
+			"detail": "compiler: C:\\msys64\\mingw64\\bin\\g++.exe"
+		},
+	
+		
+
+
+		
+		{
+            "type": "shell",
+            "label": "C/C++: cl.exe build active file",
+            "command": "cl.exe",
+            "args": [
+                "/MTd",  // Link to static libraries
+                "/GS",  // Enable security checks
+                "/O2",  // Optimize code for maximum speed
+                "/W4",  // Set warning level to 4
+                "/Zi",  // Generate complete debugging information
+                "/nologo",  // Suppress startup banner
+                "/EHsc",  // Enable C++ exception handling
+                "/ID:\\cryptolibrary\\include",  // Include directory
+                "/ID:\\Labs_Crypto\\oqs\\include",  // Include directory
+
+                "${file}",  // Input source file
+                "/link",
+                "/OUT:${fileDirname}\\${fileBasenameNoExtension}.exe",  // Output file name
+				// "/LIBPATH:D:\\cryptolibrary\\lib\\cryptopp\\msvc",  // Library path
+				"/LIBPATH:D:\\cryptolibrary\\lib\\cryptopp\\msvc\\",  // Library path
+				"/LIBPATH:D:\\Labs_Crypto\\oqs\\lib\\",
+				"oqs.lib",	
+				"cryptlib.lib",  // Library file của msvc
+				"crypt32.lib",// windows
+				"ws2_32.lib",//windows
+                "/MACHINE:x64"  // Target a 64-bit machine
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [
+                "$msCompile"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "compiler: cl.exe"
+        }
+			
+		
+	]
+}

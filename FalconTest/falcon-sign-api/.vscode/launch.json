@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "cppdbg",
+      "request": "launch",
+      "args": [],
+      "stopAtEntry": false,
+      "externalConsole": true,
+      "cwd": "c:/Users/ASUS/Documents/Nam2_Ki2/mmh/DoAnMMH/github_new/NT219.P21.ANTN_Public-Administrative-Services-via-Citizen-Services-Portal/FalconTest/falcon-sign-api/scr",
+      "program": "c:/Users/ASUS/Documents/Nam2_Ki2/mmh/DoAnMMH/github_new/NT219.P21.ANTN_Public-Administrative-Services-via-Citizen-Services-Portal/FalconTest/falcon-sign-api/scr/build/Debug/outDebug",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    }
+  ]
+}

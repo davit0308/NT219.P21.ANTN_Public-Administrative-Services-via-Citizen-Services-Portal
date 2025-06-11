@@ -12,6 +12,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 import base64
 import json
 from .models.PassportRequest import PassportRequest
+from .models.IdentityCardRequest import IdentityCardRequest
 
 from mongoengine import connect
 
@@ -205,6 +206,28 @@ def upload_signed_pdf():
         return jsonify({"status": "ok"})
     except Exception as e:
         print("❌ Lỗi lưu DB:", e)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@api.route('/api/upload-signed-cccd', methods=['POST'])
+def upload_signed_cccd():
+    data = request.get_json()
+    try:
+        sig_b64 = base64.b64encode(bytearray(data["signature"])).decode()
+        pub_b64 = data["publicKey"]
+        pdf_bytes = bytes(data["pdfBytes"])
+
+        request_doc = IdentityCardRequest(
+            userInfo = data["userInfo"],
+            signature = sig_b64,
+            publicKey = pub_b64,
+            sigAlg = data["sigAlg"],
+            pdfBytes = pdf_bytes
+        )
+        request_doc.save()
+
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        print("❌ Lỗi lưu DB CCCD:", e)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 def verify_signature(pdf_bytes, signature_bytes, public_key_b64):

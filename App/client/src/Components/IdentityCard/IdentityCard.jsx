@@ -4,6 +4,7 @@ import { customToast } from "../../utils/customToast";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ExportDC02PDFButton from "../ExportDC02PDFButton/ExportDC02PDFButton";
+import { generateFilledDC02PDF } from "../../utils/pdfUtils"; // import hàm mới
 
 const steps = [
   "Đăng nhập/Đăng kí",
@@ -216,6 +217,82 @@ export default function IdentityCard() {
 
   // Lấy địa chỉ thường trú người dùng nhập (tùy bạn lưu ở đâu, ví dụ addressDetail)
   const [addressDetail, setAddressDetail] = useState("");
+  const [ecdsaKeyPair, setEcdsaKeyPair] = useState(null);
+
+  useEffect(() => {
+    window.crypto.subtle.generateKey(
+      { name: "ECDSA", namedCurve: "P-256" },
+      true,
+      ["sign", "verify"]
+    ).then(setEcdsaKeyPair);
+  }, []);
+
+  async function signPdfWithECDSA(pdfBytes, keyPair) {
+    const hashBuffer = new Uint8Array(await window.crypto.subtle.digest("SHA-256", pdfBytes));
+    const signature = await window.crypto.subtle.sign(
+      { name: "ECDSA", hash: { name: "SHA-256" } },
+      keyPair.privateKey,
+      hashBuffer
+    );
+    const exportedPubKey = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
+    const pubKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(exportedPubKey)));
+    return {
+      signature: Array.from(new Uint8Array(signature)),
+      publicKey: pubKeyBase64,
+      sigAlg: "ECDSA-P256",
+    };
+  }
+
+  const handleFinish = async () => {
+    try {
+      if (!ecdsaKeyPair) {
+        alert("Chưa khởi tạo khoá ký!");
+        return;
+      }
+      // 1. Tạo PDF đã điền thông tin
+      const pdfBytes = await generateFilledDC02PDF({
+        fullName,
+        dob: birthDate,
+        gender,
+        idNumber: identifyNumber,
+        address: [addressDetail, wardName, districtName, provinceName].filter(Boolean).join(", "),
+      });
+
+      // 2. Ký số PDF
+      const { signature, publicKey, sigAlg } = await signPdfWithECDSA(pdfBytes, ecdsaKeyPair);
+
+      // 3. Gửi lên server
+      const response = await fetch("/api/upload-signed-cccd", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pdfBytes: Array.from(new Uint8Array(pdfBytes)),
+          signature,
+          publicKey,
+          sigAlg,
+          userInfo: {
+            fullName,
+            birthDate,
+            gender,
+            identifyNumber,
+            phone,
+            email,
+            address: [addressDetail, wardName, districtName, provinceName].filter(Boolean).join(", "),
+          },
+        }),
+      });
+
+      const resJson = await response.json();
+      if (response.ok) {
+        alert("Đề nghị cấp CCCD của bạn đã được gửi đi!");
+      } else {
+        alert("Gửi đề nghị thất bại: " + (resJson.message || ""));
+      }
+    } catch (err) {
+      alert("Có lỗi khi gửi đề nghị!");
+      console.error(err);
+    }
+  };
 
   return (
     <>
@@ -621,6 +698,14 @@ export default function IdentityCard() {
                 >
                   Tải tờ khai DC02 PDF
                 </ExportDC02PDFButton>
+              </div>
+              <div className="mt-4">
+                <button
+                  className="btn btn-primary"
+                  onClick={handleFinish}
+                >
+                  Hoàn tất
+                </button>
               </div>
             </div>
           )}

@@ -13,7 +13,10 @@ import base64
 import json
 from .models.PassportRequest import PassportRequest
 from .models.IdentityCardRequest import IdentityCardRequest
+
+from .models.EncryptedDocument import EncryptedDocument
 from .models.PoliceRecord import PoliceRecord
+
 from mongoengine import connect
 
 from flask_cors import cross_origin,CORS
@@ -228,6 +231,49 @@ def upload_signed_cccd():
         return jsonify({"status": "ok"})
     except Exception as e:
         print("❌ Lỗi lưu DB CCCD:", e)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@api.route('/api/upload-encrypted-doc', methods=['POST'])
+def upload_encrypted_doc():
+    data = request.get_json()
+    try:
+        encrypted_pdf = bytes(data["encryptedPdf"])
+        iv = bytes(data["iv"])
+        encrypted_aes_key = bytes(data["encryptedAESKey"])
+        user_info = data["userInfo"]
+
+        # Giải mã AES key bằng private RSA
+        from .utils.rsa_utils import load_private_key, decrypt_rsa_oaep
+        private_key = load_private_key()  # Đọc từ file .pem
+        aes_key = decrypt_rsa_oaep(private_key, encrypted_aes_key)
+
+        # Lưu AES key xuống local storage (mô phỏng vault)
+        with open(f"local_aes_keys/{user_info['identifyNumber']}.key", "wb") as f:
+            f.write(aes_key)
+
+        # Lưu encrypted PDF vào MongoDB
+        doc = EncryptedDocument(
+            userInfo=user_info,
+            encryptedPdf=encrypted_pdf,
+            iv=iv,
+            encryptedAESKey=encrypted_aes_key
+        )
+        doc.save()
+
+        # Lưu hồ sơ cho công an
+        police_record = PoliceRecord(
+            userId=user_info.get("identifyNumber"),
+            userName=user_info.get("fullName"),
+            recordCode="HS" + str(doc.id)[-8:],  # Ví dụ sinh mã hồ sơ
+            submitDate=datetime.datetime.utcnow(),
+            status="Chờ duyệt",
+            approveDate=None
+        )
+        police_record.save()
+
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        print("❌ Lỗi lưu DB:", e)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 def verify_signature(pdf_bytes, signature_bytes, public_key_b64):

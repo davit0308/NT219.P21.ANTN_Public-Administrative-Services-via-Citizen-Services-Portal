@@ -5,6 +5,12 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ExportDC02PDFButton from "../ExportDC02PDFButton/ExportDC02PDFButton";
 import { generateFilledDC02PDF } from "../../utils/pdfUtils"; // import hàm mới
+import {
+  generateAESKey,
+  encryptWithAESKey,
+  importRSAPublicKey,
+  encryptAESKeyWithRSA,
+} from "../../utils/crypto"; // import các hàm mã hóa
 
 const steps = [
   "Đăng nhập/Đăng kí",
@@ -261,15 +267,24 @@ export default function IdentityCard() {
       // 2. Ký số PDF
       const { signature, publicKey, sigAlg } = await signPdfWithECDSA(pdfBytes, ecdsaKeyPair);
 
-      // 3. Gửi lên server
-      const response = await fetch("/api/upload-signed-cccd", {
+      // 3. Mã hóa PDF và khóa AES
+      const aesKey = await generateAESKey();
+      const { encrypted: encryptedPdf, iv } = await encryptWithAESKey(aesKey, pdfBytes);
+
+      // 4. Lấy publicKey RSA của server (có thể fetch từ API hoặc hardcode)
+      const rsaPublicKey = await importRSAPublicKey(serverRSAPem); // Viết hàm importRSAPublicKey phù hợp
+
+      // 5. Mã hóa khóa AES bằng RSA
+      const encryptedAESKey = await encryptAESKeyWithRSA(aesKey, rsaPublicKey);
+
+      // 6. Gửi lên server
+      const response = await fetch("/api/upload-encrypted-doc", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          pdfBytes: Array.from(new Uint8Array(pdfBytes)),
-          signature,
-          publicKey,
-          sigAlg,
+          encryptedPdf: Array.from(new Uint8Array(encryptedPdf)),
+          iv: Array.from(iv),
+          encryptedAESKey: Array.from(new Uint8Array(encryptedAESKey)),
           userInfo: {
             fullName,
             birthDate,

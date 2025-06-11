@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
 import Select from 'react-select';
-import { customToast } from '../../utils/customToast';
+import { loadOQS } from '../../utils/oqsLoader';
+import { PDFDocument } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
 import ethnicList from '../../assets/ethnic.json';
 import religionList from '../../assets/religion.json';
 import countries from '../../assets/countries.json';
+import ExportPassportPDFButton from "../ExportPassportPDFButton/ExportPassportPDFButton";
+import { generateFilledPassportPDF } from "../../utils/pdfUtils";
 
 const steps = [
     'Đăng ký/Đăng nhập',
@@ -23,6 +27,17 @@ export default function Passport() {
     const [districts, setDistricts] = useState([]);
     const [selectedProvince, setSelectedProvince] = useState('');
     const [selectedDistrict, setSelectedDistrict] = useState('');
+    const [addressDetail, setAddressDetail] = useState('');
+    const [tempAddressDetail, setTempAddressDetail] = useState('');
+
+    // Thêm state riêng cho tạm trú:
+    const [tempProvince, setTempProvince] = useState('');
+    const [tempDistrict, setTempDistrict] = useState('');
+    const [tempDistricts, setTempDistricts] = useState([]);
+    const [tempSelectedWard, setTempSelectedWard] = useState('');
+    const [tempWards, setTempWards] = useState([]);
+
+
     const [selectedGender, setSelectedGender] = useState('');
     const [errors, setErrors] = useState({});
     const [passportRequest, setPassportRequest] = useState('');
@@ -33,6 +48,9 @@ export default function Passport() {
     const [religion, setReligion] = useState('');
     const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
+    const [occupation, setOccupation] = useState('');
+    const [selectedWard, setSelectedWard] = useState('');
+    const [wards, setWards] = useState([]);
 
     const validateStep3 = () => {
         const newErrors = {};
@@ -56,7 +74,7 @@ export default function Passport() {
     const handleNextStep = () => {
         if (step === 3) {
             if (!validateStep3()) {
-                customToast('Vui lòng nhập đầy đủ các trường bắt buộc!', 'error');
+                alert('Vui lòng nhập đầy đủ các trường bắt buộc!');
                 return;
             }
         }
@@ -67,12 +85,14 @@ export default function Passport() {
         if (step > 1) setStep((prev) => prev - 1);
     };
 
+    // Khi load trang, fetch danh sách tỉnh
     useEffect(() => {
         fetch('https://provinces.open-api.vn/api/p/')
             .then(res => res.json())
             .then(data => setProvinces(data));
     }, []);
 
+    // Khi chọn tỉnh thường trú, fetch huyện
     useEffect(() => {
         if (selectedProvince) {
             fetch(`https://provinces.open-api.vn/api/p/${selectedProvince}?depth=2`)
@@ -81,9 +101,51 @@ export default function Passport() {
         } else {
             setDistricts([]);
         }
+        setSelectedDistrict('');
+        setSelectedWard('');
+        setWards([]);
     }, [selectedProvince]);
 
-    // Tạo options cho react-select
+    // Khi chọn huyện thường trú, fetch xã
+    useEffect(() => {
+        if (selectedDistrict) {
+            fetch(`https://provinces.open-api.vn/api/d/${selectedDistrict}?depth=2`)
+                .then(res => res.json())
+                .then(data => setWards(data.wards || []));
+        } else {
+            setWards([]);
+        }
+        setSelectedWard('');
+    }, [selectedDistrict]);
+
+    // Khi chọn tỉnh tạm trú, fetch huyện
+    useEffect(() => {
+        if (tempProvince) {
+            fetch(`https://provinces.open-api.vn/api/p/${tempProvince}?depth=2`)
+                .then(res => res.json())
+                .then(data => setTempDistricts(data.districts || []));
+        } else {
+            setTempDistricts([]);
+        }
+        setTempDistrict('');
+        setTempSelectedWard('');
+        setTempWards([]);
+    }, [tempProvince]);
+
+    // Khi chọn huyện tạm trú, fetch xã
+    useEffect(() => {
+        if (tempDistrict) {
+            fetch(`https://provinces.open-api.vn/api/d/${tempDistrict}?depth=2`)
+                .then(res => res.json())
+                .then(data => setTempWards(data.wards || []));
+        } else {
+            setTempWards([]);
+        }
+        setTempSelectedWard('');
+    }, [tempDistrict]);
+
+
+    // Tạo options cho select
     const provinceOptions = provinces.map(p => ({ value: p.code, label: p.name }));
     const districtOptions = districts.map(d => ({ value: d.code, label: d.name }));
     const birthPlaceOptions = [
@@ -96,6 +158,151 @@ export default function Passport() {
             options: countries.map(c => ({ value: c.name, label: c.name }))
         }
     ];
+
+    // Tạo options cho địa chỉ tạm trú (đặt lên trên)
+    const tempProvinceOptions = provinces.map(p => ({ value: p.code, label: p.name }));
+    const tempDistrictOptions = tempDistricts.map(d => ({ value: d.code, label: d.name }));
+    const wardOptions = wards.map(w => ({ value: w.code, label: w.name }));
+    const tempWardOptions = tempWards.map(w => ({ value: w.code, label: w.name }));
+
+    // Lấy dữ liệu đầy đủ để truyền vào ExportPassportPDFButton
+    const fullName = `${lastName} ${middleAndFirstName}`.trim();
+    const address = [
+        addressDetail,
+        districtOptions.find(opt => opt.value === selectedDistrict)?.label,
+        provinceOptions.find(opt => opt.value === selectedProvince)?.label
+    ].filter(Boolean).join(', ');
+
+    const temporaryAddress = [
+        tempAddressDetail,
+        tempDistrictOptions.find(opt => opt.value === tempDistrict)?.label,
+        tempProvinceOptions.find(opt => opt.value === tempProvince)?.label
+    ].filter(Boolean).join(', ');
+
+    const data = {
+        lastName,
+        middleAndFirstName,
+        birthDate,
+        gender: selectedGender,
+        birthPlace,
+        nationality: "Việt Nam",
+        cccdNumber,
+        cccdIssueDate,
+        cccdIssuePlace: "Cục CSQLHC về TTXH",
+        ethnic,
+        religion,
+        occupation,
+        address: [
+            addressDetail,
+            districtOptions.find(opt => opt.value === selectedDistrict)?.label,
+            provinceOptions.find(opt => opt.value === selectedProvince)?.label
+        ].filter(Boolean).join(', '),
+        temporaryAddress,
+        phone,
+        email,
+        passportRequest,
+    };
+
+    async function signPdfWithOQS(pdfBytes) {
+        try {
+            const OQS = await loadOQS();
+            console.log("✅ OQS loaded:", !!OQS);
+
+            // Wrap các hàm native
+            const sig_new = OQS.cwrap('_OQS_SIG_new', 'number', ['string']);
+            const sig_keypair = OQS.cwrap('_OQS_SIG_keypair', 'number', ['number', 'number', 'number']);
+            const sig_sign = OQS.cwrap('_OQS_SIG_sign', 'number', ['number', 'number', 'number', 'number', 'number', 'number']);
+            const sig_free = OQS.cwrap('_OQS_SIG_free', null, ['number']);
+
+            const sigAlg = "Falcon-512";
+            // 1. Khởi tạo thuật toán
+            const sig = sig_new(sigAlg);
+
+            // 2. Cấp phát vùng nhớ cho publicKey, secretKey
+            const pubKeyLen = 897; // Falcon-512 public key bytes
+            const secKeyLen = 1281; // Falcon-512 secret key bytes
+            const pubKeyPtr = OQS._malloc(pubKeyLen);
+            const secKeyPtr = OQS._malloc(secKeyLen);
+
+            // 3. Sinh keypair
+            sig_keypair(sig, pubKeyPtr, secKeyPtr);
+
+            // 4. Hash PDF (SHA-256)
+            const hashBuffer = new Uint8Array(await window.crypto.subtle.digest("SHA-256", pdfBytes));
+            const msgPtr = OQS._malloc(hashBuffer.length);
+            OQS.HEAPU8.set(hashBuffer, msgPtr);
+
+            // 5. Cấp phát vùng nhớ cho chữ ký
+            const sigMaxLen = 690; // Falcon-512 signature bytes
+            const sigPtr = OQS._malloc(sigMaxLen);
+            const sigLenPtr = OQS._malloc(4); // uint32
+
+            // 6. Ký số
+            sig_sign(sig, sigPtr, sigLenPtr, msgPtr, hashBuffer.length, secKeyPtr);
+            console.log("Ký thành công. sigLen =", OQS.HEAPU32[sigLenPtr >> 2]);
+
+
+            // 7. Lấy chữ ký và publicKey ra JS array
+            const sigLen = OQS.HEAPU32[sigLenPtr >> 2];
+            const signature = Array.from(OQS.HEAPU8.subarray(sigPtr, sigPtr + sigLen));
+            const publicKey = Array.from(OQS.HEAPU8.subarray(pubKeyPtr, pubKeyPtr + pubKeyLen));
+
+            // 8. Giải phóng bộ nhớ
+            OQS._free(pubKeyPtr);
+            OQS._free(secKeyPtr);
+            OQS._free(msgPtr);
+            OQS._free(sigPtr);
+            OQS._free(sigLenPtr);
+            sig_free(sig);
+
+            return {
+                signature,
+                publicKey,
+                sigAlg,
+            };
+        } catch (err) {
+            console.error("❌ Lỗi trong signPdfWithOQS:", err);
+            throw err; // Để propagate ra ngoài handleFinish
+        }
+
+    }
+
+    const handleFinish = async () => {
+        try {
+            console.log("🟢 Đã nhấn nút Hoàn tất"); // 👈 kiểm tra xem có chạy không
+            // 1. Tạo PDF đã điền thông tin
+            const pdfBytes = await generateFilledPassportPDF(data);
+
+            // 2. Ký số
+            const { signature, publicKey, sigAlg } = await signPdfWithOQS(pdfBytes);
+            console.log("✅ Ký số thành công:", { signature, publicKey, sigAlg });
+
+            // 3. Gửi lên server
+            const response = await fetch("/api/upload-signed-pdf", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    pdfBytes: Array.from(new Uint8Array(pdfBytes)),
+                    signature,
+                    publicKey,
+                    sigAlg,
+                    userInfo: data,
+                }),
+            });
+
+            if (response.ok) {
+                alert("🎉 Đề nghị cấp hộ chiếu của bạn đã được gửi đi!");
+            } else {
+                const result = await response.json();
+                alert(`❌ Gửi đề nghị thất bại: ${result.message || response.statusText}`);
+                console.error("Lỗi server:", result);
+            }
+        } catch (err) {
+            alert("❌ Có lỗi khi hoàn tất: " + err.message);
+            console.error("Lỗi handleFinish:", err);
+        }
+    };
+
 
     return (
         <div className="min-h-screen bg-gray-50 py-12 px-0 flex justify-center items-start w-full">
@@ -161,14 +368,7 @@ export default function Passport() {
                             </select>
                         </div>
 
-                        <div className="flex justify-between mt-8">
-                            <button
-                                type="button"
-                                onClick={handlePrevStep}
-                                className="inline-flex items-center justify-center rounded-md bg-gray-200 px-5 py-2 text-gray-800 hover:bg-gray-300 transition"
-                            >
-                                Quay lại
-                            </button>
+                        <div className="flex justify-between align-left mt-8">
                             <button
                                 type="button"
                                 onClick={handleNextStep}
@@ -256,12 +456,12 @@ export default function Passport() {
                             <div className="col-span-1">
                                 <label className="block mb-1 font-medium text-lg">4. Số CCCD/Số định danh <span className="text-red-500">*</span></label>
                                 <input
-                                    type="date"
-                                    className={`w-full border border-gray-300 rounded px-3 py-2 ${errors.birthDate ? 'border-red-500' : ''}`}
-                                    value={birthDate}
-                                    onChange={e => setBirthDate(e.target.value)}
+                                    type="text"
+                                    className={`w-full border border-gray-300 rounded px-3 py-2 ${errors.cccdNumber ? 'border-red-500' : ''}`}
+                                    value={cccdNumber}
+                                    onChange={e => setCccdNumber(e.target.value)}
                                 />
-                                {errors.birthDate && <div className="text-red-500 text-sm">{errors.birthDate}</div>}
+                                {errors.cccdNumber && <div className="text-red-500 text-sm">{errors.cccdNumber}</div>}
                             </div>
                             <div className="col-span-1">
                                 <label className="block mb-1 font-medium text-lg">Ngày cấp <span className="text-red-500">*</span></label>
@@ -297,16 +497,16 @@ export default function Passport() {
                             <div className="col-span-1">
                                 <label className="block mb-1 font-medium text-lg">6. Tôn giáo <span className="text-red-500">*</span></label>
                                 <select
-                                    className={`w-full border border-gray-300 rounded px-3 py-2 ${errors.ethnic ? 'border-red-500' : ''}`}
-                                    value={ethnic}
-                                    onChange={e => setEthnic(e.target.value)}
+                                    className={`w-full border border-gray-300 rounded px-3 py-2 ${errors.religion ? 'border-red-500' : ''}`}
+                                    value={religion}
+                                    onChange={e => setReligion(e.target.value)}
                                 >
                                     <option value="">-- Chọn dân tộc --</option>
-                                    {ethnicList.map((item) => (
+                                    {religionList.map((item) => (
                                         <option key={item} value={item}>{item}</option>
                                     ))}
                                 </select>
-                                {errors.ethnic && <div className="text-red-500 text-sm">{errors.ethnic}</div>}
+                                {errors.religion && <div className="text-red-500 text-sm">{errors.religion}</div>}
                             </div>
                             <div className="col-span-1">
                                 <label className="block mb-1 font-medium text-lg">7. Số điện thoại <span className="text-red-500">*</span></label>
@@ -346,8 +546,8 @@ export default function Passport() {
                                 />
                                 {errors.selectedProvince && <div className="text-red-500 text-sm">{errors.selectedProvince}</div>}
                             </div>
-                            <div className="col-span-2">
-                                <label className="block mb-1 font-medium text-lg">Quận/huyện</label>
+                            <div className="col-span-1">
+                                <label className="block mb-1 font-medium text-lg">Quận/Huyện/Thị xã/Thành phố</label>
                                 <Select
                                     options={districtOptions}
                                     value={districtOptions.find(opt => opt.value === selectedDistrict) || null}
@@ -357,18 +557,29 @@ export default function Passport() {
                                     isDisabled={!selectedProvince}
                                 />
                             </div>
+                            <div className="col-span-1">
+                                <label className="block mb-1 font-medium text-lg">Xã/Phường/Thị trấn</label>
+                                <Select
+                                    options={wardOptions}
+                                    value={wardOptions.find(opt => opt.value === selectedWard) || null}
+                                    onChange={option => setSelectedWard(option?.value || '')}
+                                    placeholder="Chọn xã/phường..."
+                                    isClearable
+                                    isDisabled={!selectedDistrict}
+                                />
+                            </div>
 
                             <div className="col-span-4">
-                                <input className="w-full border border-gray-300 rounded px-3 py-2" placeholder='Số nhà, tên đường, thôn/xóm/khu phố, xã' />
+                                <input className="w-full border border-gray-300 rounded px-3 py-2" placeholder='Số nhà, tên đường, thôn/xóm/khu phố' />
                             </div>
                             <div className="col-span-2">
                                 <label className="block mb-1 font-medium text-lg">9. Địa chỉ tạm trú (ghi theo sổ tạm trú)</label>
                                 <Select
-                                    options={provinceOptions}
-                                    value={provinceOptions.find(opt => opt.value === selectedProvince) || null}
+                                    options={tempProvinceOptions}
+                                    value={tempProvinceOptions.find(opt => opt.value === tempProvince) || null}
                                     onChange={option => {
-                                        setSelectedProvince(option?.value || '');
-                                        setSelectedDistrict('');
+                                        setTempProvince(option?.value || '');
+                                        setTempDistrict('');
                                     }}
                                     placeholder="Chọn tỉnh/thành..."
                                     isClearable
@@ -376,19 +587,37 @@ export default function Passport() {
                             </div>
                             {/* Số nhà, Quận/Huyện tạm trú */}
 
-                            <div className="col-span-2">
-                                <label className="block mb-1 font-medium text-lg">Quận/Huyện</label>
+
+                            <div className='col-span-1'>
+                                <label className="block mb-1 font-medium text-lg">Quận/Huyện/Thị xã/Thành phố</label>
                                 <Select
-                                    options={districtOptions}
-                                    value={districtOptions.find(opt => opt.value === selectedDistrict) || null}
-                                    onChange={option => setSelectedDistrict(option?.value || '')}
+                                    options={tempDistrictOptions}
+                                    value={tempDistrictOptions.find(opt => opt.value === tempDistrict) || null}
+                                    onChange={option => setTempDistrict(option?.value || '')}
                                     placeholder="Chọn quận/huyện..."
                                     isClearable
-                                    isDisabled={!selectedProvince}
+                                    isDisabled={!tempProvince}
                                 />
                             </div>
+                            <div className='col-span-1'>
+                                <label className="block mb-1 font-medium text-lg">Xã/Phường/Thị trấn</label>
+                                <Select
+                                    options={tempWardOptions}
+                                    value={tempWardOptions.find(opt => opt.value === tempSelectedWard) || null}
+                                    onChange={option => setTempSelectedWard(option?.value || '')}
+                                    placeholder="Chọn xã/phường..."
+                                    isClearable
+                                    isDisabled={!tempDistrict}
+                                />
+                            </div>
+
                             <div className="col-span-4">
-                                <input className="w-full border border-gray-300 rounded px-3 py-2" placeholder='Số nhà, tên đường, thôn/xóm/khu phố, xã' />
+                                <input
+                                    className="w-full border border-gray-300 rounded px-3 py-2"
+                                    placeholder='Số nhà, tên đường, thôn/xóm/khu phố'
+                                    value={tempAddressDetail}
+                                    onChange={e => setTempAddressDetail(e.target.value)}
+                                />
                             </div>
                             {/* Nghề nghiệp, Tên và địa chỉ cơ quan */}
                             <div className="col-span-2">
@@ -615,6 +844,21 @@ export default function Passport() {
                         <p>
                             Họ tên người đăng ký: <span className="font-bold">{`${lastName} ${middleAndFirstName}`.trim()}</span>
                         </p>
+                        <div className="mt-6">
+                            <ExportPassportPDFButton
+                                data={data}
+                            >
+                                Tải tờ khai Passport PDF
+                            </ExportPassportPDFButton>
+                        </div>
+                        <div className="mt-4">
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleFinish}
+                            >
+                                Hoàn tất
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>

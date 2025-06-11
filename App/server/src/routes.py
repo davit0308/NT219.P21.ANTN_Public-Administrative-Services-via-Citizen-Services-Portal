@@ -9,6 +9,8 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 import base64
+import json
+from .models.PassportRequest import PassportRequest
 
 from mongoengine import connect
 
@@ -16,6 +18,7 @@ from flask_cors import cross_origin,CORS
 import os
 from dotenv import load_dotenv
 from .models.User import User
+from pymongo import MongoClient
 
 load_dotenv()
 ACCESS_KEY = os.getenv("ACCESS_KEY")
@@ -164,3 +167,26 @@ def ecdh_exchange():
     ).derive(shared_key)
     session["session_key"] = base64.b64encode(session_key).decode()
     return jsonify({"success": True})
+
+
+api = Blueprint('api', __name__)
+client = MongoClient(os.getenv("MONGO_URI"))
+db = client[os.getenv("MONGO_DB_NAME")]
+
+@api.route('/api/upload-signed-pdf', methods=['POST'])
+def upload_signed_pdf():
+    data = request.get_json()
+    try:
+        request_doc = PassportRequest(
+            userInfo = data["userInfo"],
+            signature = data["signature"],
+            publicKey = data["publicKey"],
+            sigAlg = data["sigAlg"],
+            pdfBytes = bytes(data["pdfBytes"])  # chuyển mảng byte về bytes
+        )
+        request_doc.save()
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        print("Lỗi lưu DB:", e)
+        return jsonify({"status": "error", "message": str(e)}), 500
+

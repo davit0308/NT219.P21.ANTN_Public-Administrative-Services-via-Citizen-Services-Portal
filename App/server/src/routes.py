@@ -6,7 +6,8 @@ from .utils.jwt import token_required
 from flask import Blueprint, jsonify, session
 from cryptography.hazmat.primitives.asymmetric import dh
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 import base64
 import json
@@ -173,20 +174,47 @@ api = Blueprint('api', __name__)
 client = MongoClient(os.getenv("MONGO_URI"))
 db = client[os.getenv("MONGO_DB_NAME")]
 
+import base64
+
 @api.route('/api/upload-signed-pdf', methods=['POST'])
 def upload_signed_pdf():
     data = request.get_json()
     try:
+        print("📥 Dữ liệu nhận được:", data.keys())
+        print("🔢 Kích thước PDF bytes:", len(data["pdfBytes"]))
+
+        # Nếu signature và publicKey là list số nguyên
+        sig_b64 = base64.b64encode(bytearray(data["signature"])).decode()
+        # Nếu publicKey là base64 string từ client, dùng luôn:
+        pub_b64 = data["publicKey"]
+
+        # Nếu pdfBytes là list số nguyên:
+        pdf_bytes = bytes(data["pdfBytes"])
+        # Nếu pdfBytes là base64 string:
+        # pdf_bytes = base64.b64decode(data["pdfBytes"])
+
         request_doc = PassportRequest(
             userInfo = data["userInfo"],
-            signature = data["signature"],
-            publicKey = data["publicKey"],
+            signature = sig_b64,
+            publicKey = pub_b64,
             sigAlg = data["sigAlg"],
-            pdfBytes = bytes(data["pdfBytes"])  # chuyển mảng byte về bytes
+            pdfBytes = pdf_bytes
         )
         request_doc.save()
+
         return jsonify({"status": "ok"})
     except Exception as e:
-        print("Lỗi lưu DB:", e)
+        print("❌ Lỗi lưu DB:", e)
         return jsonify({"status": "error", "message": str(e)}), 500
+
+def verify_signature(pdf_bytes, signature_bytes, public_key_b64):
+    public_key = serialization.load_der_public_key(base64.b64decode(public_key_b64))
+    digest = hashes.Hash(hashes.SHA256())
+    digest.update(pdf_bytes)
+    pdf_hash = digest.finalize()
+    try:
+        public_key.verify(signature_bytes, pdf_hash, ec.ECDSA(hashes.SHA256()))
+        return True
+    except InvalidSignature:
+        return False
 

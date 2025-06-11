@@ -51,6 +51,7 @@ export default function Passport() {
     const [occupation, setOccupation] = useState('');
     const [selectedWard, setSelectedWard] = useState('');
     const [wards, setWards] = useState([]);
+    const [ecdsaKeyPair, setEcdsaKeyPair] = useState(null);
 
     const validateStep3 = () => {
         const newErrors = {};
@@ -255,6 +256,12 @@ export default function Passport() {
             OQS._free(sigLenPtr);
             sig_free(sig);
 
+            console.log("✅ Ký số thành công:", {
+                signature,
+                publicKey,
+                sigAlg,
+            });
+
             return {
                 signature,
                 publicKey,
@@ -267,15 +274,36 @@ export default function Passport() {
 
     }
 
+    async function signPdfWithECDSA(pdfBytes, keyPair) {
+        // Hash PDF
+        const hashBuffer = new Uint8Array(await window.crypto.subtle.digest("SHA-256", pdfBytes));
+        // Ký số
+        const signature = await window.crypto.subtle.sign(
+            { name: "ECDSA", hash: { name: "SHA-256" } },
+            keyPair.privateKey,
+            hashBuffer
+        );
+        // Export publicKey
+        const exportedPubKey = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
+        const pubKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(exportedPubKey)));
+        return {
+            signature: Array.from(new Uint8Array(signature)),
+            publicKey: pubKeyBase64,
+            sigAlg: "ECDSA-P256",
+        };
+    }
+
     const handleFinish = async () => {
         try {
-            console.log("🟢 Đã nhấn nút Hoàn tất"); // 👈 kiểm tra xem có chạy không
+            if (!ecdsaKeyPair) {
+                alert("Chưa khởi tạo khoá ký!");
+                return;
+            }
             // 1. Tạo PDF đã điền thông tin
             const pdfBytes = await generateFilledPassportPDF(data);
 
-            // 2. Ký số
-            const { signature, publicKey, sigAlg } = await signPdfWithOQS(pdfBytes);
-            console.log("✅ Ký số thành công:", { signature, publicKey, sigAlg });
+            // 2. Ký số bằng ECDSA
+            const { signature, publicKey, sigAlg } = await signPdfWithECDSA(pdfBytes, ecdsaKeyPair);
 
             // 3. Gửi lên server
             const response = await fetch("/api/upload-signed-pdf", {
@@ -290,19 +318,28 @@ export default function Passport() {
                 }),
             });
 
+            const resJson = await response.json();
+            console.log("Upload signed PDF response:", response.status, resJson);
+
             if (response.ok) {
-                alert("🎉 Đề nghị cấp hộ chiếu của bạn đã được gửi đi!");
+                alert("Đề nghị cấp hộ chiếu của bạn đã được gửi đi!");
             } else {
-                const result = await response.json();
-                alert(`❌ Gửi đề nghị thất bại: ${result.message || response.statusText}`);
-                console.error("Lỗi server:", result);
+                alert("Gửi đề nghị thất bại: " + (resJson.message || ""));
             }
         } catch (err) {
-            alert("❌ Có lỗi khi hoàn tất: " + err.message);
-            console.error("Lỗi handleFinish:", err);
+            alert("Có lỗi khi gửi đề nghị!");
+            console.error(err);
         }
     };
 
+    useEffect(() => {
+        // Tạo keypair khi vào form
+        window.crypto.subtle.generateKey(
+            { name: "ECDSA", namedCurve: "P-256" },
+            true,
+            ["sign", "verify"]
+        ).then(setEcdsaKeyPair);
+    }, []);
 
     return (
         <div className="min-h-screen bg-gray-50 py-12 px-0 flex justify-center items-start w-full">

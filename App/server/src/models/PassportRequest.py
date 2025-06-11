@@ -1,8 +1,8 @@
-from mongoengine import Document, StringField, ListField, DictField, BinaryField
+from mongoengine import Document, StringField, BinaryField, DictField
 
 class PassportRequest(Document):
-    userInfo = DictField(required=True)
-    signature = ListField()
-    publicKey = ListField()
+    userInfo = DictField()
+    signature = StringField() 
+    publicKey = StringField() 
     sigAlg = StringField()
     pdfBytes = BinaryField()

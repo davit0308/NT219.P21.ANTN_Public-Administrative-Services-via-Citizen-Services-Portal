@@ -13,7 +13,7 @@ import base64
 import json
 from .models.PassportRequest import PassportRequest
 from .models.IdentityCardRequest import IdentityCardRequest
-
+from .models.PoliceRecord import PoliceRecord
 from mongoengine import connect
 
 from flask_cors import cross_origin,CORS
@@ -241,3 +241,22 @@ def verify_signature(pdf_bytes, signature_bytes, public_key_b64):
     except InvalidSignature:
         return False
 
+
+@api.route('/api/identity-card-requests', methods=['GET'])
+def get_identity_card_requests():
+    try:
+        requests = PoliceRecord.objects()
+        result = []
+        for req in requests:
+            result.append({
+                "userId": str(req.userInfo.get("userId", "")),
+                "userName": req.userInfo.get("userName", ""),
+                "recordCode": str(req.id),  # hoặc req.file_id nếu có trường này riêng
+                "submitDate": req.userInfo.get("submitDate", ""),
+                "status": req.userInfo.get("status", "pending"),
+                "approveDate": req.userInfo.get("approveDate", "")
+            })
+        return jsonify(result)
+    except Exception as e:
+        print("❌ Lỗi lấy danh sách CCCD:", e)
+        return jsonify([]), 500

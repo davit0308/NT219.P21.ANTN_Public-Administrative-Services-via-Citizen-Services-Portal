@@ -2,54 +2,54 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 
 // Fake data mẫu
-const fakeRequests = [
-    {
-        id: "HS20250001",
-        name: "Nguyễn Văn A",
-        cccd: "012345678901",
-        type: "identitycard",
-        detail: {
-            fullname: "Nguyễn Văn A",
-            birthdate: "01/01/2000",
-            gender: "Nam",
-            phone: "0912345678",
-            email: "a@gmail.com",
-            reason: "Cấp thẻ căn cước lần đầu",
-        },
-        status: "pending",
-    },
-    {
-        id: "HS20250002",
-        name: "Trần Thị B",
-        cccd: "012345678902",
-        type: "passport",
-        detail: {
-            fullname: "Trần Thị B",
-            birthdate: "02/02/2001",
-            gender: "Nữ",
-            phone: "0987654321",
-            email: "b@gmail.com",
-            reason: "Cấp hộ chiếu lần đầu",
-        },
-        status: "approved",
-    },
-    {
-        id: "HS20250003",
-        name: "Lê Văn C",
-        cccd: "012345678903",
-        type: "identitycard",
-        detail: {
-            fullname: "Lê Văn C",
-            birthdate: "03/03/2002",
-            gender: "Nam",
-            phone: "0909090909",
-            email: "c@gmail.com",
-            reason: "Cấp lại do mất",
-        },
-        status: "rejected",
-        rejectReason: "Thiếu giấy tờ xác minh",
-    },
-];
+// const fakeRequests = [
+//     {
+//         id: "HS20250001",
+//         name: "Nguyễn Văn A",
+//         cccd: "012345678901",
+//         type: "identitycard",
+//         detail: {
+//             fullname: "Nguyễn Văn A",
+//             birthdate: "01/01/2000",
+//             gender: "Nam",
+//             phone: "0912345678",
+//             email: "a@gmail.com",
+//             reason: "Cấp thẻ căn cước lần đầu",
+//         },
+//         status: "pending",
+//     },
+//     {
+//         id: "HS20250002",
+//         name: "Trần Thị B",
+//         cccd: "012345678902",
+//         type: "passport",
+//         detail: {
+//             fullname: "Trần Thị B",
+//             birthdate: "02/02/2001",
+//             gender: "Nữ",
+//             phone: "0987654321",
+//             email: "b@gmail.com",
+//             reason: "Cấp hộ chiếu lần đầu",
+//         },
+//         status: "approved",
+//     },
+//     {
+//         id: "HS20250003",
+//         name: "Lê Văn C",
+//         cccd: "012345678903",
+//         type: "identitycard",
+//         detail: {
+//             fullname: "Lê Văn C",
+//             birthdate: "03/03/2002",
+//             gender: "Nam",
+//             phone: "0909090909",
+//             email: "c@gmail.com",
+//             reason: "Cấp lại do mất",
+//         },
+//         status: "rejected",
+//         rejectReason: "Thiếu giấy tờ xác minh",
+//     },
+// ];
 
 const navTabs = [
     { key: "identitycard", label: "Xét duyệt yêu cầu cấp căn cước công dân" },
@@ -72,6 +72,15 @@ export default function OfficerDashboard() {
     const [modalDetail, setModalDetail] = useState(null);
     const [modalReject, setModalReject] = useState(null);
     const [rejectReason, setRejectReason] = useState("");
+    const [requests, setRequests] = useState([]);
+
+    // Fetch dữ liệu từ backend
+    useEffect(() => {
+        fetch("/api/identity-card-requests")
+            .then(res => res.json())
+            .then(data => setRequests(data))
+            .catch(() => setRequests([]));
+    }, []);
 
     // Đồng bộ nav với query string khi URL thay đổi
     useEffect(() => {
@@ -79,7 +88,7 @@ export default function OfficerDashboard() {
     }, [tabParam]);
 
     // Lọc hồ sơ theo nav và status
-    const filtered = fakeRequests.filter(
+    const filtered = requests.filter(
         (r) => r.type === nav && r.status === statusTab
     );
 

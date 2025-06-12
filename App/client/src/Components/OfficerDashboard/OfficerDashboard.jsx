@@ -77,7 +77,7 @@ export default function OfficerDashboard() {
     );
 
     const filteredRequests = requests.filter(r => {
-        if (statusTab === "pending") return r.status === "Chờ duyệt" || r.status === "pending";
+        if (statusTab === "pending") return r.status === "pending";
         if (statusTab === "approved") return r.status === "approved";
         if (statusTab === "rejected") return r.status === "rejected";
         return true;
@@ -85,19 +85,22 @@ export default function OfficerDashboard() {
 
     const handleAccept = async () => {
         try {
-            // Gửi yêu cầu ký số lên server (ví dụ /api/approve-identity-card)
             const res = await fetch("/api/approve-identity-card", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     recordCode: modalDetail.recordCode,
-                    officerId: "officer123", // hoặc lấy từ session
+                    officerId: "officer123",
                 }),
             });
             if (res.ok) {
                 alert("Đã duyệt và ký số thành công!");
                 setModalDetail(null);
-                // Cập nhật lại danh sách hồ sơ
+                // Fetch lại danh sách hồ sơ để cập nhật trạng thái
+                fetch("/api/identity-card-requests")
+                    .then(res => res.json())
+                    .then(data => setRequests(data))
+                    .catch(() => setRequests([]));
             } else {
                 alert("Lỗi khi duyệt!");
             }
@@ -115,15 +118,20 @@ export default function OfficerDashboard() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                recordCode: modalDetail.recordCode,
-                officerId: "officer123", // hoặc lấy từ session
+                recordCode: modalReject.recordCode,
+                officerId: "officer123",
                 reason: rejectReason,
             }),
         });
         if (res.ok) {
             alert("Đã từ chối hồ sơ!");
             setModalReject(null);
-            // reload lại danh sách
+            setRejectReason("");
+            // Fetch lại danh sách hồ sơ để cập nhật trạng thái
+            fetch("/api/identity-card-requests")
+                .then(res => res.json())
+                .then(data => setRequests(data))
+                .catch(() => setRequests([]));
         } else {
             alert("Lỗi khi từ chối!");
         }
@@ -226,39 +234,71 @@ export default function OfficerDashboard() {
                         {pdfUrl && (
                             <iframe src={pdfUrl} width="100%" height="600px" title="PDF Preview" />
                         )}
-                        
-                            <div className="flex justify-end gap-3 mt-8">
-                                <button
-                                    className="btn btn-success text-white"
-                                    onClick={() => {
-                                        setModalDetail(null);
-                                        alert("Đã duyệt hồ sơ!");
-                                    }}
-                                >
-                                    Accept
-                                </button>
-                                <button
-                                    className="btn btn-error text-white"
-                                    onClick={() => {
-                                        setModalDetail(null);
-                                        setModalReject(modalDetail);
-                                    }}
-                                    type="button"
-                                >
-                                    Reject
-                                </button>
-                            </div>
+
+                        <div className="flex justify-end gap-3 mt-8">
+                            <button
+                                className="btn btn-success text-white"
+                                onClick={() => {
+                                    setModalDetail(null);
+                                    alert("Đã duyệt hồ sơ!");
+                                    handleAccept();
+                                }}
+                            >
+                                Accept
+                            </button>
+                            <button
+                                className="btn btn-error text-white"
+                                onClick={() => {
+                                    setModalDetail(null); // Đóng modal chi tiết
+                                    setModalReject(modalDetail); // Mở modal từ chối
+                                }}
+                                type="button"
+                            >
+                                Reject
+                            </button>
+                        </div>
                     </div>
                 </dialog>
             )}
 
             {/* Modal từ chối */}
             {modalReject && (
-                <div>
-                    <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Nhập lý do từ chối..." />
-                    <button onClick={handleReject}>Xác nhận từ chối</button>
-                    <button onClick={() => setModalReject(null)}>Hủy</button>
-                </div>
+                <dialog open className="modal">
+                    <div className="modal-box max-w-lg">
+                        <h3 className="font-bold text-lg mb-4">Lý do từ chối hồ sơ</h3>
+                        <textarea
+                            className="textarea textarea-bordered w-full mb-4"
+                            value={rejectReason}
+                            onChange={e => setRejectReason(e.target.value)}
+                            placeholder="Nhập lý do từ chối..."
+                        />
+                        <div className="flex justify-end gap-3">
+                            <button
+                                className="btn btn-error text-white"
+                                onClick={async () => {
+                                    if (!rejectReason) {
+                                        alert("Vui lòng nhập lý do từ chối!");
+                                        return;
+                                    }
+                                    await handleReject();
+                                    setModalReject(null); // Đóng modal từ chối
+                                    setRejectReason("");  // Reset lý do
+                                }}
+                            >
+                                Xác nhận từ chối
+                            </button>
+                            <button
+                                className="btn"
+                                onClick={() => {
+                                    setModalReject(null);
+                                    setRejectReason("");
+                                }}
+                            >
+                                Hủy
+                            </button>
+                        </div>
+                    </div>
+                </dialog>
             )}
 
 

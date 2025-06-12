@@ -266,7 +266,7 @@ def upload_encrypted_doc():
             userName=user_info.get("fullName"),
             recordCode="HS" + str(doc.id)[-8:],  # Ví dụ sinh mã hồ sơ
             submitDate=datetime.datetime.utcnow(),
-            status="Chờ duyệt",
+            status="pending",
             approveDate=None
         )
         police_record.save()

@@ -287,7 +287,6 @@ def verify_signature(pdf_bytes, signature_bytes, public_key_b64):
     except InvalidSignature:
         return False
 
-
 @api.route('/api/identity-card-requests', methods=['GET'])
 def get_identity_card_requests():
     try:
@@ -295,14 +294,14 @@ def get_identity_card_requests():
         result = []
         for req in requests:
             result.append({
-                "userId": str(req.userInfo.get("userId", "")),
-                "userName": req.userInfo.get("userName", ""),
-                "recordCode": str(req.id),  # hoặc req.file_id nếu có trường này riêng
-                "submitDate": req.userInfo.get("submitDate", ""),
-                "status": req.userInfo.get("status", "pending"),
-                "approveDate": req.userInfo.get("approveDate", "")
+                "userId": str(getattr(req, "userId", "")),
+                "userName": getattr(req, "userName", ""),
+                "recordCode": str(getattr(req, "recordCode", req.id)),
+                "submitDate": str(getattr(req, "submitDate", "")),
+                "status": getattr(req, "status", "pending"),
+                "approveDate": str(getattr(req, "approveDate", "")) if getattr(req, "approveDate", None) else ""
             })
         return jsonify(result)
     except Exception as e:
-        print("❌ Lỗi lấy danh sách CCCD:", e)
+        print("Lỗi lấy danh sách CCCD:", e)
         return jsonify([]), 500

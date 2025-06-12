@@ -226,7 +226,7 @@ export default function OfficerDashboard() {
                         {pdfUrl && (
                             <iframe src={pdfUrl} width="100%" height="600px" title="PDF Preview" />
                         )}
-                        {modalDetail.status === "pending" && (
+                        
                             <div className="flex justify-end gap-3 mt-8">
                                 <button
                                     className="btn btn-success text-white"
@@ -248,7 +248,6 @@ export default function OfficerDashboard() {
                                     Reject
                                 </button>
                             </div>
-                        )}
                     </div>
                 </dialog>
             )}

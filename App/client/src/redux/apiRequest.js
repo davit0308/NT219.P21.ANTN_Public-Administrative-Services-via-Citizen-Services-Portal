@@ -22,7 +22,7 @@ export const loginUser = async (user, dispatch, navigate) => {
 
         // Lưu token vào localStorage/sessionStorage nếu cần
         localStorage.setItem("token", data.token);
-        console.log("Token đã được lưu:", data.token);
+        console.log("Token đã được lưu");
 
         // Thông báo thành công
         alert("Đăng nhập thành công", "success");

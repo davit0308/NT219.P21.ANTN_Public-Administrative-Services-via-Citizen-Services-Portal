@@ -10,7 +10,7 @@ import {
   encryptWithAESKey,
   importRSAPublicKey,
   encryptAESKeyWithRSA,
-} from "../../utils/crypto"; // import các hàm mã hóa
+} from "../../utils/crypto";
 
 const steps = [
   "Đăng nhập/Đăng kí",
@@ -224,6 +224,7 @@ export default function IdentityCard() {
   // Lấy địa chỉ thường trú người dùng nhập (tùy bạn lưu ở đâu, ví dụ addressDetail)
   const [addressDetail, setAddressDetail] = useState("");
   const [ecdsaKeyPair, setEcdsaKeyPair] = useState(null);
+  const [serverRSAPem, setServerRSAPem] = useState("");
 
   useEffect(() => {
     window.crypto.subtle.generateKey(
@@ -231,6 +232,12 @@ export default function IdentityCard() {
       true,
       ["sign", "verify"]
     ).then(setEcdsaKeyPair);
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/server-rsa-public-key")
+      .then(res => res.json())
+      .then(data => setServerRSAPem(data.publicKey || ""));
   }, []);
 
   async function signPdfWithECDSA(pdfBytes, keyPair) {
@@ -253,6 +260,10 @@ export default function IdentityCard() {
     try {
       if (!ecdsaKeyPair) {
         alert("Chưa khởi tạo khoá ký!");
+        return;
+      }
+      if (!serverRSAPem) {
+        alert("Không lấy được public key của server!");
         return;
       }
       // 1. Tạo PDF đã điền thông tin

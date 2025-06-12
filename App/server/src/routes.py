@@ -247,8 +247,8 @@ def upload_encrypted_doc():
         aes_key = decrypt_rsa_oaep(private_key, encrypted_aes_key)
 
         # Lưu AES key xuống local storage (mô phỏng vault)
-        with open(f"local_aes_keys/{user_info['identifyNumber']}.key", "wb") as f:
-            f.write(aes_key)
+        from src.utils.rsa_utils import save_aes_key
+        save_aes_key(user_info['identifyNumber'], aes_key)
 
         # Lưu encrypted PDF vào MongoDB
         doc = EncryptedDocument(
@@ -285,4 +285,10 @@ def verify_signature(pdf_bytes, signature_bytes, public_key_b64):
         return True
     except InvalidSignature:
         return False
+
+@main.route("/api/server-rsa-public-key", methods=["GET"])
+def get_server_rsa_public_key():
+    from src.utils.rsa_utils import load_public_key_pem
+    pem = load_public_key_pem()  # Hàm này trả về chuỗi PEM public key
+    return jsonify({"publicKey": pem})
 

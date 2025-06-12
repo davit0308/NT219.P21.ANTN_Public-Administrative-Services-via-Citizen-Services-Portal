@@ -13,6 +13,7 @@ import base64
 import json
 from .models.PassportRequest import PassportRequest
 from .models.IdentityCardRequest import IdentityCardRequest
+
 from .models.EncryptedDocument import EncryptedDocument
 from .models.PoliceRecord import PoliceRecord
 
@@ -292,3 +293,22 @@ def get_server_rsa_public_key():
     pem = load_public_key_pem()  # Hàm này trả về chuỗi PEM public key
     return jsonify({"publicKey": pem})
 
+
+@api.route('/api/identity-card-requests', methods=['GET'])
+def get_identity_card_requests():
+    try:
+        requests = PoliceRecord.objects()
+        result = []
+        for req in requests:
+            result.append({
+                "userId": str(req.userInfo.get("userId", "")),
+                "userName": req.userInfo.get("userName", ""),
+                "recordCode": str(req.id),  # hoặc req.file_id nếu có trường này riêng
+                "submitDate": req.userInfo.get("submitDate", ""),
+                "status": req.userInfo.get("status", "pending"),
+                "approveDate": req.userInfo.get("approveDate", "")
+            })
+        return jsonify(result)
+    except Exception as e:
+        print("❌ Lỗi lấy danh sách CCCD:", e)
+        return jsonify([]), 500

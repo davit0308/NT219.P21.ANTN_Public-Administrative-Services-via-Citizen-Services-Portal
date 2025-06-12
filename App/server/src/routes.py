@@ -313,3 +313,78 @@ def get_identity_card_requests():
     except Exception as e:
         print("Lỗi lấy danh sách CCCD:", e)
         return jsonify([]), 500
+
+@api.route('/api/identity-card-request/<record_code>', methods=['GET'])
+def get_identity_card_request_detail(record_code):
+    try:
+        # Tìm hồ sơ PoliceRecord
+        police_record = PoliceRecord.objects(recordCode=record_code).first()
+        if not police_record:
+            return jsonify({"error": "Không tìm thấy hồ sơ"}), 404
+
+        # Tìm EncryptedDocument theo userId (identifyNumber)
+        user_id = police_record.userId
+        encrypted_doc = EncryptedDocument.objects(userInfo__identifyNumber=user_id).first()
+        if not encrypted_doc:
+            return jsonify({"error": "Không tìm thấy PDF"}), 404
+
+        # Giải mã AES key từ file local
+        from src.utils.rsa_utils import load_private_key, decrypt_rsa_oaep, save_aes_key
+        aes_key_path = os.path.join("local_aes_keys", f"{user_id}.key")
+        with open(aes_key_path, "rb") as f:
+            aes_key = f.read()
+
+        # Trả về PDF đã mã hóa, IV, AES key (dạng base64)
+        return jsonify({
+            "userInfo": encrypted_doc.userInfo,
+            "encryptedPdf": base64.b64encode(encrypted_doc.encryptedPdf).decode(),
+            "iv": base64.b64encode(encrypted_doc.iv).decode(),
+            "aesKey": base64.b64encode(aes_key).decode(),
+        })
+    except Exception as e:
+        print("Lỗi lấy chi tiết hồ sơ:", e)
+        return jsonify({"error": str(e)}), 500
+
+@api.route('/api/approve-identity-card', methods=['POST'])
+def approve_identity_card():
+    data = request.get_json()
+    record_code = data.get("recordCode")
+    officer_id = data.get("officerId")
+    try:
+        # Tìm hồ sơ
+        police_record = PoliceRecord.objects(recordCode=record_code).first()
+        if not police_record:
+            return jsonify({"error": "Không tìm thấy hồ sơ"}), 404
+
+        # Cập nhật trạng thái
+        police_record.status = "approved"
+        police_record.approveDate = datetime.datetime.utcnow()
+        police_record.save()
+
+        # Ký số PDF (giả lập, thực tế cần ký số thật)
+        # Lưu vào bảng mới, ví dụ: ApprovedIdentityCard
+        # Bạn tự định nghĩa model này
+
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@api.route('/api/reject-identity-card', methods=['POST'])
+def reject_identity_card():
+    data = request.get_json()
+    record_code = data.get("recordCode")
+    officer_id = data.get("officerId")
+    reason = data.get("reason", "")
+    try:
+        police_record = PoliceRecord.objects(recordCode=record_code).first()
+        if not police_record:
+            return jsonify({"error": "Không tìm thấy hồ sơ"}), 404
+
+        police_record.status = "rejected"
+        police_record.approveDate = datetime.datetime.utcnow()
+        police_record.rejectReason = reason
+        police_record.save()
+
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

@@ -35,3 +35,41 @@ def save_aes_key(user_id, aes_key_bytes):
     file_path = os.path.join(folder, f"{user_id}.key")
     with open(file_path, "wb") as f:
         f.write(aes_key_bytes)
+
+def verify_falcon_signature(pdf_data, signature_data, public_key):
+    """
+    Xác minh chữ ký FALCON cho tài liệu PDF
+    """
+    import hashlib
+    
+    # Tính hash của PDF
+    pdf_hash = hashlib.sha256(pdf_data).hexdigest()
+    
+    # Trong thực tế sẽ dùng thư viện FALCON để verify
+    # Ở đây giả lập quá trình verify
+    try:
+        # Giả lập việc verify signature với FALCON
+        # signature_data chứa thông tin từ CA
+        expected_hash = signature_data.get('document_hash')
+        algorithm = signature_data.get('algorithm')
+        
+        if algorithm == 'FALCON-512' and pdf_hash == expected_hash:
+            return True
+        return False
+    except Exception as e:
+        print(f"Error verifying signature: {e}")
+        return False
+
+def get_signed_documents_from_ca():
+    """
+    Lấy danh sách tài liệu đã được CA ký số
+    """
+    import requests
+    try:
+        response = requests.get("http://localhost:9092/api/signed-documents")
+        if response.status_code == 200:
+            return response.json()
+        return []
+    except requests.exceptions.ConnectionError:
+        print("CA server không khả dụng")
+        return []

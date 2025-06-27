@@ -9,8 +9,9 @@ export default function NavbarMenu() {
           <Link to="/" className="flex items-center gap-1 hover:text-red-700">
             <FaHome className="text-red-700" /> Trang chủ
           </Link>
-          <Link to="/passport" className="hover:text-red-700">Cấp hộ chiếu</Link>
-          <Link to="/identitycard" className="hover:text-red-700">Cấp căn cước công dân</Link>
+          <Link to="/passport" className="hover:text-red-700">Chờ xác thực</Link>
+          <Link to="/identitycard" className="hover:text-red-700">Đã xác thực</Link>
+          <Link to="/signed-documents" className="hover:text-red-700">📄 Tài liệu đã ký</Link>
           <Link to="/support" className="hover:text-red-700">Hỗ trợ</Link>
         </div>
       </div>

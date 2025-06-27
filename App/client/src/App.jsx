@@ -63,10 +63,12 @@ import Passport from './Components/Passport/Passport';
 import Login from './Components/Login/Login';
 import Register from './Components/Register/Register';
 import Support from './Components/Login/Login';
+import SignedDocuments from './Components/SignedDocuments/SignedDocuments';
 
 import Header from './Components/Header/Header';
 import Footer from './Components/Footer/Footer';
 import OfficerDashboard from './Components/OfficerDashboard/OfficerDashboard';
+import CADashboard from './Components/CADashboard/CADashboard';
 import { useSelector } from "react-redux";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
@@ -92,9 +94,9 @@ function AppContent() {
     }
   }, [isLoggedIn, dispatch, navigate]);
 
-    useEffect(() => {
-      startTokenRefreshInterval(); // Bắt đầu kiểm tra tự động
-    }, []);
+  useEffect(() => {
+    startTokenRefreshInterval(); // Bắt đầu kiểm tra tự động
+  }, []);
   // Lấy role từ user trong Redux store nếu đã login
   const role = isLoggedIn?.role || null;
 
@@ -112,7 +114,7 @@ function AppContent() {
         <Route path="/register" element={isLoggedIn ? <Navigate to="/" /> : <Register />} />
 
 
-        
+
 
         /* Trang officer — cần đăng nhập và role === 'officer' */
         <Route
@@ -124,6 +126,24 @@ function AppContent() {
                   <Navigate to="/officer" />
                   <OfficerDashboard />
                 </>
+              ) : (
+                <div className="text-center py-20 text-red-600 font-bold text-xl">
+                  Bạn không có quyền truy cập trang này.
+                </div>
+              )
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+
+        {/* Trang CA Dashboard — cần đăng nhập và role === 'officer' */}
+        <Route
+          path="/ca"
+          element={
+            isLoggedIn ? (
+              isOfficer ? (
+                <CADashboard />
               ) : (
                 <div className="text-center py-20 text-red-600 font-bold text-xl">
                   Bạn không có quyền truy cập trang này.
@@ -161,6 +181,16 @@ function AppContent() {
           element={
             isLoggedIn && !isOfficer ? (
               <Passport />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route
+          path="/signed-documents"
+          element={
+            isLoggedIn && !isOfficer ? (
+              <SignedDocuments />
             ) : (
               <Navigate to="/login" />
             )

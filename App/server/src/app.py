@@ -17,7 +17,7 @@ connect(host=os.getenv("MONGO_URI"))
 
 # Đăng ký blueprint
 app.register_blueprint(main)
-CORS(main, supports_credentials=True, origins=["http://localhost:3000"])
+CORS(main, supports_credentials=True, origins=["http://localhost:5173"])
 if __name__ == "__main__":
     app.run(debug=True, port=9090,use_reloader=False)
     

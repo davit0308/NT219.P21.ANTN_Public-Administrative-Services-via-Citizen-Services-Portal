@@ -386,22 +386,18 @@ export default function OfficerDashboard() {
                                 <iframe src={pdfUrl} width="100%" height="600px" title="PDF Preview" />
                             </div>
                         )}
-                        {!pdfUrl && (
-                            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
-                                <p className="text-yellow-700">
-                                    Không thể tải hoặc xem trước tài liệu PDF.
-                                    {detailData?.error && (
-                                        <span className="block mt-1 text-sm">
-                                            Lỗi: {detailData.error}
-                                        </span>
-                                    )}
-                                    <span className="block mt-1 text-sm">
-                                        Vui lòng kiểm tra console để biết thêm chi tiết.
-                                    </span>
-                                </p>
+                        {/* Thêm đoạn này để xem PDF đã ký nếu đã ký */}
+                        {modalDetail.status === "signed" && (
+                            <div className="mt-4">
+                                <h4 className="font-semibold mb-2">Tài liệu đã ký:</h4>
+                                <iframe
+                                    src={`/api/get-signed-pdf/${modalDetail.recordCode}`}
+                                    width="100%"
+                                    height="600px"
+                                    title="PDF đã ký"
+                                />
                             </div>
                         )}
-
                         <div className="flex justify-end gap-3 mt-8">
                             <button
                                 className="btn btn-ghost"

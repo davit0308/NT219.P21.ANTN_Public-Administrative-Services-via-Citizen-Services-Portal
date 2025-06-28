@@ -778,7 +778,6 @@ def sign_certificate():
     ca_officer_id = data.get("caOfficerId", "ca_officer")
     
     try:
-        # Find certificate request
         cert_request = CertificateRequest.objects(id=request_id).first()
         if not cert_request:
             return jsonify({"error": "Certificate request not found"}), 404
@@ -788,22 +787,39 @@ def sign_certificate():
         
         # Sign CSR to generate certificate
         certificate_pem = sign_csr_with_ca(cert_request.csr_data)
-        
-        # Update certificate request with signed certificate
         cert_request.certificate_data = certificate_pem
         cert_request.status = "signed"
         cert_request.ca_signature_date = datetime.datetime.utcnow()
         cert_request.save()
         
-        # Update police record status to "signed" (maps to "signed" on frontend)
+        # Update police record status to "signed"
         police_record = PoliceRecord.objects(recordCode=cert_request.record_code).first()
         if police_record:
-            police_record.status = "signed"  # Đổi từ "signed"
+            police_record.status = "signed"
             police_record.save()
+        
+        # --- Ký số PDF bằng PyHanko ---
+        from .models.EncryptedDocument import EncryptedDocument
+        from src.utils.pdf_signer import sign_pdf_with_cert
+
+        # Đường dẫn private key CA (PEM) và certificate CA (PEM)
+        ca_key_path = "ca_private_key.pem"
+        ca_cert_path = "ca_certificate.pem"
+        with open(ca_key_path, "rb") as f:
+            ca_key_pem = f.read()
+        with open(ca_cert_path, "rb") as f:
+            ca_cert_pem = f.read()
+
+        # Lấy PDF gốc
+        encrypted_doc = EncryptedDocument.objects(recordCode=cert_request.record_code).first()
+        if encrypted_doc and encrypted_doc.encryptedPdf:
+            signed_pdf = sign_pdf_with_cert(encrypted_doc.encryptedPdf, ca_cert_pem, ca_key_pem)
+            encrypted_doc.signedPdf = signed_pdf
+            encrypted_doc.save()
         
         return jsonify({
             "status": "ok",
-            "message": "Certificate signed successfully",
+            "message": "Certificate signed and PDF signed successfully",
             "certificate_id": str(cert_request.id)
         })
         
@@ -972,6 +988,17 @@ def get_pdf_by_record_code(record_code):
         return response
 
     return jsonify({"error": "Không tìm thấy PDF"}), 404
+
+@api.route('/api/get-signed-pdf/<record_code>', methods=['GET'])
+def get_signed_pdf(record_code):
+    from .models.EncryptedDocument import EncryptedDocument
+    doc = EncryptedDocument.objects(recordCode=record_code).first()
+    if doc and doc.signedPdf:
+        response = make_response(doc.signedPdf)
+        response.headers.set('Content-Type', 'application/pdf')
+        response.headers.set('Content-Disposition', 'inline', filename=f"{record_code}.signed.pdf")
+        return response
+    return jsonify({"error": "Không tìm thấy PDF đã ký"}), 404
 
 @api.route('/api/debug/list-record-codes', methods=['GET'])
 def debug_list_record_codes():

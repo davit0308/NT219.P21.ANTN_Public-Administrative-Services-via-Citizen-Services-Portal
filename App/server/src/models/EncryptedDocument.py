@@ -1,10 +1,10 @@
 # models/EncryptedDocument.py
-from mongoengine import Document, DictField, BinaryField, StringField
+from mongoengine import Document, BinaryField, DictField, StringField
 
 class EncryptedDocument(Document):
     userInfo = DictField()
     encryptedPdf = BinaryField()
-    encryptedContent = BinaryField()  # Alias for backward compatibility
-    recordCode = StringField()  # Add recordCode field
     iv = BinaryField()
     encryptedAESKey = BinaryField()
+    recordCode = StringField()
+    signedPdf = BinaryField()  

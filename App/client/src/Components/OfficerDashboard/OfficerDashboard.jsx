@@ -119,12 +119,7 @@ export default function OfficerDashboard() {
         (r) => r.type === nav && r.status === statusTab
     );
 
-    const filteredRequests = requests.filter(r => {
-        if (statusTab === "unsigned") return r.status === "pending";
-        if (statusTab === "sent_for_verification") return r.status === "approved";
-        if (statusTab === "signed") return r.status === "rejected";
-        return true;
-    });
+    const filteredRequests = requests.filter(r => r.status === statusTab);
 
     const handleAccept = async () => {
         try {
@@ -158,6 +153,7 @@ export default function OfficerDashboard() {
             return;
         }
         try {
+            console.log(record.recordCode);
             const pdfBytes = await fetchPdfBytes(record.recordCode);
 
             // 2. Gửi lên backend để tạo CSR
@@ -171,8 +167,13 @@ export default function OfficerDashboard() {
                 }),
             });
             if (res.ok) {
-                alert("Đã gửi xác nhận thành công!");
-                // Cập nhật trạng thái sang "sent_for_verification"
+                alert("Gửi xác nhận thành công!");
+                setModalDetail(null);
+                // Fetch lại danh sách để cập nhật trạng thái mới
+                fetch("/api/identity-card-requests")
+                    .then(res => res.json())
+                    .then(data => setRequests(data))
+                    .catch(() => setRequests([]));
             }
         } catch (err) {
             alert("Không lấy được file PDF: " + err.message);
@@ -322,9 +323,9 @@ export default function OfficerDashboard() {
                             <div className="text-gray-700">ID: {r.userId}</div>
                             <div className="text-gray-700">
                                 Trạng thái: {
-                                    r.status === 'pending' ? 'Chưa ký' :
-                                        r.status === 'approved' ? 'Đã gửi xác thực' :
-                                            r.status === 'rejected' ? 'Đã ký' : r.status
+                                    r.status === 'unsigned' ? 'Chưa ký' :
+                                        r.status === 'sent_for_verification' ? 'Đã gửi xác thực' :
+                                            r.status === 'signed' ? 'Đã ký' : r.status
                                 }
                             </div>
                         </div>
@@ -408,7 +409,7 @@ export default function OfficerDashboard() {
                             >
                                 Close
                             </button>
-                            {modalDetail.status === "pending" && (
+                            {modalDetail.status === "unsigned" && (
                                 <button
                                     className="btn btn-primary"
                                     onClick={() => handleSendConfirmation(modalDetail)}

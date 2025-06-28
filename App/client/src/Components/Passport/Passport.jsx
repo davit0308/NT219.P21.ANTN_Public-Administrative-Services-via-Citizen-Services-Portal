@@ -14,7 +14,7 @@ export default function Passport() {
       const response = await fetch("/api/ca/certificate-requests");
       if (response.ok) {
         const data = await response.json();
-        setPendingCSRs(data.requests || []);
+        setPendingCSRs(Array.isArray(data) ? data : []);
       } else {
         setPendingCSRs([]);
       }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 
 export default function CADashboard() {
-    const [activeTab, setActiveTab] = useState("pending");
+    const [activeTab, setActiveTab] = useState("unsigned");
     const [pendingCSRs, setPendingCSRs] = useState([]);
     const [signedCerts, setSignedCerts] = useState([]);
     const [modalDetail, setModalDetail] = useState(null);
@@ -139,8 +139,8 @@ export default function CADashboard() {
                     {/* Tabs */}
                     <div className="flex space-x-4">
                         <button
-                            onClick={() => setActiveTab("pending")}
-                            className={`px-4 py-2 rounded-lg font-medium ${activeTab === "pending"
+                            onClick={() => setActiveTab("unsigned")}
+                            className={`px-4 py-2 rounded-lg font-medium ${activeTab === "unsigned"
                                     ? "bg-blue-500 text-white"
                                     : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                                 }`}
@@ -161,7 +161,7 @@ export default function CADashboard() {
 
                 {/* Content */}
                 <div className="space-y-6">
-                    {activeTab === "pending" && (
+                    {activeTab === "unsigned" && (
                         <div>
                             <h2 className="text-xl font-semibold text-gray-800 mb-4">
                                 CSR chờ xác thực

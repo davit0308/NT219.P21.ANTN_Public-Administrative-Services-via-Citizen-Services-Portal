@@ -13,18 +13,16 @@ export default function OfficerNavbar() {
                     to="/officer"
                     className={`btn join-item ${!tab && !isCARoute ? "btn-primary" : ""}`}
                 >
-                    Đã xác thực (CCCD)
+                    Đã xác thực
                 </Link>
                 <Link
                     to="/officer?tab=passport"
                     className={`btn join-item ${tab === "passport" ? "btn-primary" : ""}`}
                 >
-                    Chờ xác thực (Hộ chiếu)
+                    Chờ xác thực
                 </Link>
             </div>
-            <div className="ml-auto font-semibold text-indigo-700">
-                Xin chào, Cán bộ xác thực!
-            </div>
+
         </nav>
     );
 }

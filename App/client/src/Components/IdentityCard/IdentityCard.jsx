@@ -14,7 +14,7 @@ export default function IdentityCard() {
       const response = await fetch("/api/ca/signed-certificates");
       if (response.ok) {
         const data = await response.json();
-        setSignedCerts(data.certificates || []);
+        setSignedCerts(Array.isArray(data) ? data : []);
       } else {
         console.error("Failed to fetch signed CRTs");
       }

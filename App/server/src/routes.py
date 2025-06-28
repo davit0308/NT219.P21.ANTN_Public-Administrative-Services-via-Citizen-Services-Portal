@@ -266,11 +266,11 @@ def upload_encrypted_doc():
 
         # Lưu hồ sơ cho công an
         police_record = PoliceRecord(
-            userId=user_info.get("identifyNumber"),
-            userName=user_info.get("fullName"),
-            recordCode="HS" + str(doc.id)[-8:],  # Ví dụ sinh mã hồ sơ
+            userId=user_id,
+            userName="Uploaded Document",
+            recordCode=record_code,
             submitDate=datetime.datetime.utcnow(),
-            status="pending",
+            status="unsigned",  # Đổi từ "unsigned" sang "unsigned"
             approveDate=None
         )
         police_record.save()
@@ -339,7 +339,7 @@ def upload_document():
             userName="Uploaded Document",
             recordCode=record_code,
             submitDate=datetime.datetime.utcnow(),
-            status="pending",  # This will be mapped to "unsigned" on frontend
+            status="unsigned",  # This will be mapped to "unsigned" on frontend
             approveDate=None
         )
         police_record.save()
@@ -349,8 +349,10 @@ def upload_document():
         # In a real scenario, you might want to encrypt this
         user_info = {
             "identifyNumber": user_id,
-            "fullName": f"Uploaded Document - {file.filename}"
+            "fullName": f"Uploaded Document - {file.filename}",
+            "recordCode": record_code
         }
+
         
         doc = EncryptedDocument(
             userInfo=user_info,
@@ -397,7 +399,7 @@ def send_confirmation():
                 userName=user_info.get("fullName"),
                 recordCode=record_code,
                 submitDate=datetime.datetime.utcnow(),
-                status="pending"
+                status="unsigned"
             )
             police_record.save()
 
@@ -442,12 +444,12 @@ def send_confirmation():
             record_code=record_code,
             csr_data=csr_pem,
             officer_id=officer_id,
-            status="pending"
+            status="unsigned"
         )
         cert_request.save()
 
-        # Cập nhật trạng thái hồ sơ thành "approved" (maps to "sent_for_verification" on frontend)
-        police_record.status = "approved"
+        # Cập nhật trạng thái hồ sơ thành "sent_for_verification" (maps to "sent_for_verification" on frontend)
+        police_record.status = "sent_for_verification"  # Đổi từ "sent_for_verification"
         police_record.approveDate = datetime.datetime.utcnow()
         police_record.save()
 
@@ -466,34 +468,21 @@ def get_identity_card_requests():
         requests = PoliceRecord.objects()
         result = []
         for req in requests:
-            # Determine document type and appropriate status
             record_code = str(getattr(req, "recordCode", req.id))
-            status = getattr(req, "status", "pending")
-            
-            # Determine type based on record code
+            status = getattr(req, "status", "unsigned")
+
+            # Xác định loại tài liệu
             if "CCCD" in record_code:
                 doc_type = "identitycard"
-                # For IdentityCard (CCCD): map to "signed" status for "Đã xác thực" tab
-                if status in ["pending", "approved", "rejected"]:
-                    mapped_status = "signed"  # All CCCD docs go to "Đã xác thực"
-                else:
-                    mapped_status = status
             elif "PASSPORT" in record_code:
                 doc_type = "passport"
-                # For Passport: use original status mapping
-                if status == "pending":
-                    mapped_status = "unsigned"  # Chưa ký
-                elif status == "approved":
-                    mapped_status = "sent_for_verification"  # Đã gửi xác thực
-                elif status == "rejected":
-                    mapped_status = "signed"  # Đã ký
-                else:
-                    mapped_status = status
             else:
-                # Default behavior for unknown types
                 doc_type = "identitycard"
-                mapped_status = status
-            
+
+            # Mapping status giữ nguyên theo backend mới
+            # (unsigned, sent_for_verification, signed)
+            mapped_status = status
+
             result.append({
                 "userId": str(getattr(req, "userId", "")),
                 "userName": getattr(req, "userName", ""),
@@ -501,7 +490,7 @@ def get_identity_card_requests():
                 "submitDate": str(getattr(req, "submitDate", "")),
                 "status": mapped_status,
                 "type": doc_type,
-                "originalStatus": status,  # Keep original for debugging
+                "originalStatus": status,
                 "approveDate": str(getattr(req, "approveDate", "")) if getattr(req, "approveDate", None) else ""
             })
         return jsonify(result)
@@ -628,7 +617,7 @@ def approve_identity_card():
             return jsonify({"error": "Không tìm thấy hồ sơ"}), 404
 
         # Cập nhật trạng thái
-        police_record.status = "approved"
+        police_record.status = "sent_for_verification"
         police_record.approveDate = datetime.datetime.utcnow()
         police_record.save()
 
@@ -651,7 +640,7 @@ def reject_identity_card():
         if not police_record:
             return jsonify({"error": "Không tìm thấy hồ sơ"}), 404
 
-        police_record.status = "rejected"
+        police_record.status = "signed"
         police_record.approveDate = datetime.datetime.utcnow()
         police_record.rejectReason = reason
         police_record.save()
@@ -737,22 +726,20 @@ def debug_check_pdf(user_id):
 def get_certificate_requests():
     """Get all pending certificate requests for CA dashboard"""
     try:
-        cert_requests = CertificateRequest.objects(status="pending")
+        from .models.CertificateRequest import CertificateRequest
+        csrs = CertificateRequest.objects(status="unsigned")
         result = []
-        for req in cert_requests:
-            police_record = PoliceRecord.objects(recordCode=req.record_code).first()
+        for csr in csrs:
             result.append({
-                "id": str(req.id),
-                "record_code": req.record_code,
-                "created_date": str(req.created_date),
-                "officer_id": req.officer_id,
-                "status": req.status,
-                "user_name": police_record.userName if police_record else "Unknown",
-                "user_id": police_record.userId if police_record else "Unknown"
+                "id": str(csr.id),
+                "record_code": csr.record_code,
+                "created_date": csr.created_date,
+                "status": csr.status,
+                "officer_id": csr.officer_id,
+                # Thêm các trường khác nếu cần
             })
         return jsonify(result)
     except Exception as e:
-        print(f"Error getting certificate requests: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @api.route('/api/ca/certificate-request/<request_id>', methods=['GET'])
@@ -796,7 +783,7 @@ def sign_certificate():
         if not cert_request:
             return jsonify({"error": "Certificate request not found"}), 404
         
-        if cert_request.status != "pending":
+        if cert_request.status != "unsigned":
             return jsonify({"error": "Certificate request is not pending"}), 400
         
         # Sign CSR to generate certificate
@@ -808,10 +795,10 @@ def sign_certificate():
         cert_request.ca_signature_date = datetime.datetime.utcnow()
         cert_request.save()
         
-        # Update police record status to "rejected" (maps to "signed" on frontend)
+        # Update police record status to "signed" (maps to "signed" on frontend)
         police_record = PoliceRecord.objects(recordCode=cert_request.record_code).first()
         if police_record:
-            police_record.status = "rejected"  # This maps to "signed" on frontend
+            police_record.status = "signed"  # Đổi từ "signed"
             police_record.save()
         
         return jsonify({
@@ -832,15 +819,15 @@ def get_signed_certificates():
         result = []
         for req in cert_requests:
             police_record = PoliceRecord.objects(recordCode=req.record_code).first()
+            # Giả lập các trường cho frontend
             result.append({
-                "id": str(req.id),
-                "record_code": req.record_code,
-                "created_date": str(req.created_date),
-                "ca_signature_date": str(req.ca_signature_date),
-                "officer_id": req.officer_id,
+                "certificate_id": str(req.id),
+                "citizen_id": police_record.userId if police_record else "Unknown",
+                "common_name": police_record.userName if police_record else "Unknown",
+                "signed_at": str(req.ca_signature_date) if hasattr(req, "ca_signature_date") else "",
+                "expires_at": "",  # Nếu có trường hết hạn thì trả về, không thì để rỗng
                 "status": req.status,
-                "user_name": police_record.userName if police_record else "Unknown",
-                "user_id": police_record.userId if police_record else "Unknown"
+                # Các trường khác nếu cần
             })
         return jsonify(result)
     except Exception as e:
@@ -864,8 +851,8 @@ def check_and_apply_certificates():
             if not police_record:
                 continue
                 
-            # Check if already processed (status should be "rejected" which maps to "signed")
-            if police_record.status != "rejected":
+            # Check if already processed (status should be "signed" which maps to "signed")
+            if police_record.status != "signed":
                 # Find the encrypted document
                 encrypted_doc = EncryptedDocument.objects(recordCode=cert_request.record_code).first()
                 if not encrypted_doc:
@@ -883,8 +870,8 @@ def check_and_apply_certificates():
                     encrypted_doc.encryptedContent = signed_pdf
                     encrypted_doc.save()
                     
-                    # Update police record status to "rejected" (maps to "signed" on frontend)
-                    police_record.status = "rejected"
+                    # Update police record status to "signed" (maps to "signed" on frontend)
+                    police_record.status = "unsigned"
                     police_record.save()
                     
                     applied_count += 1
@@ -905,8 +892,8 @@ def check_certificate_updates():
         # Find documents that have received certificates
         updated_records = []
         
-        # Get all police records in "approved" status (sent_for_verification)
-        pending_records = PoliceRecord.objects(status="approved")
+        # Get all police records in "sent_for_verification" status (sent_for_verification)
+        pending_records = PoliceRecord.objects(status="sent_for_verification")
         
         for record in pending_records:
             # Check if there's a signed certificate for this record
@@ -933,15 +920,22 @@ def generate_csr():
     officer_id = data["officerId"]
     from .utils.crypto_utils import generate_csr_from_pdf
     csr_pem = generate_csr_from_pdf(pdf_bytes, record_code, officer_id)
-    # Lưu vào CertificateRequest
     from .models.CertificateRequest import CertificateRequest
     cert_req = CertificateRequest(
         record_code=record_code,
         csr_data=csr_pem,
         officer_id=officer_id,
-        status="pending"
+        status="unsigned"
     )
     cert_req.save()
+
+    # Cập nhật trạng thái hồ sơ
+    from .models.PoliceRecord import PoliceRecord
+    police_record = PoliceRecord.objects(recordCode=record_code).first()
+    if police_record:
+        police_record.status = "sent_for_verification"
+        police_record.save()
+
     return jsonify({"status": "ok"})
 
 @api.route('/api/get-pdf/<record_code>', methods=['GET'])
@@ -952,6 +946,9 @@ def get_pdf_by_record_code(record_code):
 
     # Ưu tiên lấy từ EncryptedDocument
     doc = EncryptedDocument.objects(recordCode=record_code).first()
+    if not doc:
+        doc = EncryptedDocument.objects(userInfo__recordCode=record_code).first()
+
     if doc and doc.encryptedPdf:
         response = make_response(doc.encryptedPdf)
         response.headers.set('Content-Type', 'application/pdf')
